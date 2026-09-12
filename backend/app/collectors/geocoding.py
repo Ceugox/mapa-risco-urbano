@@ -88,7 +88,9 @@ def cached_resolve(via: str, referencia: str | None) -> dict:
     if "lat" in result:
         with connection() as conn:
             conn.execute(
-                "INSERT OR REPLACE INTO geocode_cache(key,lat,lon,precision) VALUES(?,?,?,?)",
+                """INSERT INTO geocode_cache(key,lat,lon,precision) VALUES(?,?,?,?)
+                ON CONFLICT(key) DO UPDATE SET lat=excluded.lat,lon=excluded.lon,
+                precision=excluded.precision""",
                 (key, result["lat"], result["lon"], result["precision"]),
             )
     return result
