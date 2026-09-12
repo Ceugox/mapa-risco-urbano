@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+httpx
+beautifulsoup4
+shapely
+h3
+openpyxl
+apscheduler
+pydantic-settings
+ruff
+pytest

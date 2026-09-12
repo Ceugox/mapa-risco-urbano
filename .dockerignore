@@ -1,0 +1,15 @@
+.git
+.github
+node_modules
+**/node_modules
+**/dist
+**/.env
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+backend/.venv
+backend/data/app.db*
+data/app.db*
+probes
+*.log
+nul
