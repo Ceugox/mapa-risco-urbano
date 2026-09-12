@@ -1,8 +1,9 @@
-import { useState } from "react";
-
-type Contact = { name: string; phone: string };
+import { useEffect, useState } from "react";
+import { Contact, getContacts, login, register, saveContacts } from "../api";
 
 const KEY = "riscosp-contatos";
+const TOKEN_KEY = "mapasp_token";
+const EMAIL_KEY = "mapasp_email";
 const MAX = 3;
 
 const PHONES = [
@@ -32,10 +33,63 @@ export function EmergencyPanel() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [status, setStatus] = useState("");
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || "");
+  const [email, setEmail] = useState(() => localStorage.getItem(EMAIL_KEY) || "");
+  const [showAuth, setShowAuth] = useState(false);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPass, setAuthPass] = useState("");
+  const [authMsg, setAuthMsg] = useState("");
+
+  useEffect(() => {
+    if (!token) return;
+    getContacts(token)
+      .then((data) => {
+        if (data.contacts.length) {
+          setContacts(data.contacts);
+          localStorage.setItem(KEY, JSON.stringify(data.contacts));
+        } else {
+          const local = loadContacts();
+          if (local.length) saveContacts(token, local).catch(() => {});
+        }
+      })
+      .catch(() => logout());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function save(next: Contact[]) {
     setContacts(next);
     localStorage.setItem(KEY, JSON.stringify(next));
+    if (token) saveContacts(token, next).catch(() => {});
+  }
+
+  async function submitAuth(mode: "login" | "register") {
+    setAuthMsg("…");
+    try {
+      const fn = mode === "login" ? login : register;
+      const result = await fn(authEmail.trim(), authPass);
+      localStorage.setItem(TOKEN_KEY, result.token);
+      localStorage.setItem(EMAIL_KEY, result.email);
+      setToken(result.token);
+      setEmail(result.email);
+      setShowAuth(false);
+      setAuthMsg("");
+      const data = await getContacts(result.token);
+      if (data.contacts.length) {
+        setContacts(data.contacts);
+        localStorage.setItem(KEY, JSON.stringify(data.contacts));
+      } else if (contacts.length) {
+        saveContacts(result.token, contacts).catch(() => {});
+      }
+    } catch (err) {
+      setAuthMsg(err instanceof Error ? err.message : "Erro na conta");
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(EMAIL_KEY);
+    setToken("");
+    setEmail("");
   }
 
   function add() {
@@ -88,8 +142,8 @@ export function EmergencyPanel() {
         <p className="eyebrow">PROTEÇÃO PESSOAL</p>
         <h2>Emergência</h2>
         <p className="muted">
-          Aviso imediato para quem você confia. Contatos ficam só no seu aparelho — nada vai para o
-          servidor.
+          Aviso imediato para quem você confia. Sem conta, os contatos ficam só no aparelho; com
+          conta, ficam salvos para qualquer dispositivo.
         </p>
       </div>
 
@@ -114,6 +168,62 @@ export function EmergencyPanel() {
 
         <div className="contacts-card">
           <h3>Rede de confiança</h3>
+          {token ? (
+            <p className="account-line">
+              ✓ {email} · contatos sincronizados{" "}
+              <button className="button ghost" onClick={logout} type="button">
+                sair
+              </button>
+            </p>
+          ) : (
+            <>
+              <button
+                className="button ghost"
+                onClick={() => setShowAuth(!showAuth)}
+                type="button"
+                aria-expanded={showAuth}
+              >
+                Entrar para salvar contatos na conta {showAuth ? "▴" : "▾"}
+              </button>
+              {showAuth && (
+                <div className="auth-form">
+                  <input
+                    type="email"
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    placeholder="E-mail"
+                    size={10}
+                    aria-label="E-mail"
+                  />
+                  <input
+                    type="password"
+                    value={authPass}
+                    onChange={(e) => setAuthPass(e.target.value)}
+                    placeholder="Senha (mín. 6)"
+                    size={8}
+                    aria-label="Senha"
+                  />
+                  <div className="auth-actions">
+                    <button
+                      className="button secondary"
+                      onClick={() => submitAuth("login")}
+                      type="button"
+                    >
+                      Entrar
+                    </button>
+                    <button
+                      className="button ghost"
+                      onClick={() => submitAuth("register")}
+                      type="button"
+                    >
+                      Criar conta
+                    </button>
+                  </div>
+                  {authMsg && <p className="route-status">{authMsg}</p>}
+                </div>
+              )}
+            </>
+          )}
           <ul className="contact-list">
             {contacts.length === 0 && <li className="empty">Nenhum contato ainda.</li>}
             {contacts.map((c) => (

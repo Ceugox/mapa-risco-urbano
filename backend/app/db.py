@@ -80,6 +80,14 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS geocode_cache (
                 key TEXT PRIMARY KEY, lat REAL, lon REAL, precision TEXT
             );
+            CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL,
+                pass_hash TEXT NOT NULL, salt TEXT NOT NULL,
+                contacts_json TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS sessions (
+                token TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at TEXT NOT NULL
+            );
             """
         )
         if _postgres():
@@ -208,3 +216,43 @@ def confirm_report(report_id: str) -> int | None:
         value = row["confirmations"] + 1
         conn.execute("UPDATE reports SET confirmations=? WHERE id=?", (value, report_id))
         return value
+
+
+def create_user(user_id: str, email: str, pass_hash: str, salt: str) -> bool:
+    try:
+        with connection() as conn:
+            conn.execute(
+                "INSERT INTO users(id,email,pass_hash,salt,created_at) VALUES(?,?,?,?,?)",
+                (user_id, email, pass_hash, salt, now_iso()),
+            )
+        return True
+    except (sqlite3.IntegrityError, psycopg.IntegrityError):
+        return False
+
+
+def get_user_by_email(email: str):
+    with connection() as conn:
+        return conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+
+
+def create_session(token: str, user_id: str) -> None:
+    with connection() as conn:
+        conn.execute(
+            "INSERT INTO sessions(token,user_id,created_at) VALUES(?,?,?)",
+            (token, user_id, now_iso()),
+        )
+
+
+def get_user_by_token(token: str):
+    with connection() as conn:
+        return conn.execute(
+            "SELECT u.* FROM users u JOIN sessions s ON s.user_id=u.id WHERE s.token=?",
+            (token,),
+        ).fetchone()
+
+
+def save_user_contacts(user_id: str, contacts_json: str) -> None:
+    with connection() as conn:
+        conn.execute(
+            "UPDATE users SET contacts_json=? WHERE id=?", (contacts_json, user_id)
+        )

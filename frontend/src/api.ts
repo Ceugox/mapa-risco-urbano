@@ -74,3 +74,38 @@ export async function getSupportNearby(
   if (!response.ok) throw new Error("Busca de pontos de apoio indisponível");
   return response.json();
 }
+
+export type Contact = { name: string; phone: string };
+
+async function authRequest(path: string, body?: object, token?: string, method = "POST") {
+  const response = await fetch(`${base}/api${path}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.detail || "Erro na conta");
+  return data;
+}
+
+export function register(
+  email: string,
+  password: string,
+): Promise<{ token: string; email: string }> {
+  return authRequest("/auth/register", { email, password });
+}
+
+export function login(email: string, password: string): Promise<{ token: string; email: string }> {
+  return authRequest("/auth/login", { email, password });
+}
+
+export function getContacts(token: string): Promise<{ contacts: Contact[]; email: string }> {
+  return authRequest("/contacts", undefined, token, "GET");
+}
+
+export function saveContacts(token: string, contacts: Contact[]): Promise<{ contacts: Contact[] }> {
+  return authRequest("/contacts", { contacts }, token, "PUT");
+}

@@ -16,6 +16,7 @@ from .collectors.inmet import collect as collect_inmet
 from .collectors.meteo import collect as collect_meteo
 from .config import settings
 from .db import get_reports, init_db, store_snapshot
+from .routers.auth import router as auth_router
 from .routers.ingest import router as ingest_router
 from .routers.layers import router as layers_router
 from .routers.reports import router as reports_router
@@ -73,6 +74,7 @@ app.add_middleware(
     CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
 )
+app.include_router(auth_router)
 app.include_router(layers_router)
 app.include_router(reports_router)
 app.include_router(ingest_router)

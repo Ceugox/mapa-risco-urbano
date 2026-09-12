@@ -1226,6 +1226,46 @@ h1 span {
   font-size: 11px;
 }
 
+.account-line {
+  margin: 0 0 8px;
+  color: var(--fg-2);
+  font-size: 12px;
+}
+
+.account-line .button {
+  min-height: 28px;
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 12px;
+  padding: 12px;
+  border: 1px solid var(--line-1);
+  border-radius: 8px;
+  background: var(--bg-3);
+}
+
+.auth-form input {
+  min-height: 40px;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  outline: 0;
+  background: var(--bg-2);
+  color: var(--fg-0);
+  font-size: 14px;
+}
+
+.auth-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .contact-form {
   display: flex;
   gap: 8px;
