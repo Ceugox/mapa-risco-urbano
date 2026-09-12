@@ -26,6 +26,8 @@ Documentos de referência (fora do código, na raiz do pacote entregue):
 backend/
   app/main.py              FastAPI, CORS, scheduler dos coletores, /health
   app/config.py            Settings (pydantic-settings; lê backend/.env)
+  app/db.py                SQLite local; se DATABASE_URL=postgres(ql)://... estiver
+                           setada, usa Postgres (psycopg) — mesmas queries
   app/collectors/          cge.py, cemaden.py, inmet.py, meteo.py, geocoding.py, base.py
   app/routers/layers.py    GET /api/layers, GET /api/layers/{layer}  (GeoJSON)
   app/routers/reports.py   POST /api/reports, GET /api/reports, POST /api/reports/{id}/confirm

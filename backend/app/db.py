@@ -1,11 +1,21 @@
 import json
 import math
+import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import psycopg
+from psycopg.rows import dict_row
+
 from .config import settings
+
+_NAMED = re.compile(r":([a-zA-Z_][a-zA-Z0-9_]*)")
+
+
+def _postgres() -> bool:
+    return settings.database_url.startswith(("postgres://", "postgresql://"))
 
 
 def _path() -> Path:
@@ -16,12 +26,36 @@ def _path() -> Path:
     return path
 
 
+def _translate(sql: str) -> str:
+    return _NAMED.sub(r"%(\1)s", sql).replace("?", "%s")
+
+
+class _PgConnection:
+    def __init__(self, conn: psycopg.Connection) -> None:
+        self._conn = conn
+
+    def execute(self, sql: str, params=()):
+        return self._conn.execute(_translate(sql), params)
+
+    def executescript(self, script: str):
+        return self._conn.execute(script)
+
+    def commit(self) -> None:
+        self._conn.commit()
+
+    def close(self) -> None:
+        self._conn.close()
+
+
 @contextmanager
 def connection():
-    conn = sqlite3.connect(_path())
-    conn.row_factory = sqlite3.Row
-    try:
+    if _postgres():
+        conn = _PgConnection(psycopg.connect(settings.database_url, row_factory=dict_row))
+    else:
+        conn = sqlite3.connect(_path())
+        conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
+    try:
         yield conn
         conn.commit()
     finally:
@@ -48,7 +82,14 @@ def init_db() -> None:
             );
             """
         )
-        columns = [row["name"] for row in conn.execute("PRAGMA table_info(reports)")]
+        if _postgres():
+            rows = conn.execute(
+                "SELECT column_name AS name FROM information_schema.columns"
+                " WHERE table_name='reports'"
+            ).fetchall()
+        else:
+            rows = conn.execute("PRAGMA table_info(reports)").fetchall()
+        columns = [row["name"] for row in rows]
         if "source" not in columns:
             conn.execute("ALTER TABLE reports ADD COLUMN source TEXT NOT NULL DEFAULT 'app'")
 

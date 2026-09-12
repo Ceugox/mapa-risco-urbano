@@ -7,5 +7,6 @@ h3
 openpyxl
 apscheduler
 pydantic-settings
+psycopg[binary]>=3.2,<4
 ruff
 pytest

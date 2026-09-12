@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     database_path: str = "data/app.db"
+    database_url: str = ""
     cge_interval: int = 300
     cemaden_interval: int = 600
     inmet_interval: int = 600
