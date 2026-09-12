@@ -12,6 +12,7 @@ import { confirmReport } from "../api";
 import { Feature, FeatureCollection, LayerName, LayerStatus } from "../types";
 import { labels, layerColors, LayerPanel } from "./LayerPanel";
 import { LocationTools } from "./LocationTools";
+import { RoutePanel } from "./RoutePanel";
 
 const center = { lat: -23.55, lng: -46.63 };
 const crimeColors = ["#fef3c7", "#fdba74", "#f97316", "#dc2626", "#7f1d1d"];
@@ -381,6 +382,7 @@ export function MapView({
           )}
           <Traffic />
           <LocationTools reportMode={reportMode} />
+          <RoutePanel reportMode={reportMode} />
         </GoogleMap>
       </div>
     </APIProvider>

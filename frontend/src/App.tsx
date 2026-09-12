@@ -4,6 +4,7 @@ import { labels } from "./components/LayerPanel";
 import { MapView } from "./components/Map";
 import { EmergencyPanel } from "./components/EmergencyPanel";
 import { ReportForm } from "./components/ReportForm";
+import { SupportPanel } from "./components/SupportPanel";
 import { Feature, FeatureCollection, LayerName, LayerStatus } from "./types";
 import "./styles.css";
 
@@ -122,6 +123,7 @@ export default function App() {
           <div className="nav-links">
             <a href="#mapa">O mapa</a>
             <a href="#emergencia">Emergência</a>
+            <a href="#apoio">Apoio</a>
             <a href="#como-funciona">Como funciona</a>
             <a href="#fontes">Fontes</a>
           </div>
@@ -207,6 +209,8 @@ export default function App() {
         </section>
 
         <EmergencyPanel />
+
+        <SupportPanel />
 
         <section id="como-funciona" className="how section container">
           <div className="section-intro">

@@ -1312,3 +1312,264 @@ h1 span {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Route panel — pill colapsável dentro do mapa (topo direito) */
+.route-panel {
+  position: absolute;
+  z-index: 6;
+  top: 16px;
+  right: 16px;
+  width: 300px;
+  max-width: calc(100% - 32px);
+  border: 1px solid rgba(10, 10, 11, 0.18);
+  border-radius: 10px;
+  background: rgba(24, 24, 27, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+.route-panel:not(.open) {
+  width: auto;
+  border-radius: 999px;
+}
+
+.route-panel-header {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.route-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.route-field {
+  display: flex;
+  gap: 6px;
+}
+
+.route-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line-1);
+  border-radius: 8px;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-size: 13px;
+}
+
+.route-field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+.route-suggestions {
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--line-1);
+  border-radius: 8px;
+  background: var(--bg-1);
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.route-suggestions button {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.route-suggestions button:hover {
+  background: var(--bg-2);
+  color: var(--fg-1);
+}
+
+.route-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.route-status {
+  color: var(--fg-2);
+  font-size: 11px;
+}
+
+.route-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid var(--line-1);
+  padding-top: 8px;
+}
+
+.route-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line-1);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.route-option.active {
+  border-color: var(--accent);
+  color: var(--fg-1);
+}
+
+.route-score {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  min-width: 28px;
+}
+
+.route-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 6px;
+}
+
+.route-chip {
+  padding: 3px 8px;
+  border: 1px solid var(--line-1);
+  border-radius: 999px;
+  color: var(--fg-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+/* Pontos de apoio */
+.support-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.support-status {
+  color: var(--fg-2);
+  font-size: 13px;
+  margin-top: 16px;
+}
+
+.support-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.support-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-1);
+  border-radius: 10px;
+  background: var(--bg-2);
+}
+
+.support-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.support-item strong {
+  color: var(--fg-1);
+  font-size: 14px;
+}
+
+.support-meta {
+  color: var(--fg-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.support-badge {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-1);
+  color: var(--fg-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.support-badge.security {
+  color: var(--risk-weather);
+  border: 1px solid var(--risk-weather);
+}
+
+.support-badge.health {
+  color: var(--risk-flood);
+  border: 1px solid var(--risk-flood);
+}
+
+.support-badge.ddm {
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+@media (max-width: 767px) {
+  .route-panel {
+    top: auto;
+    right: 8px;
+    bottom: 130px;
+    left: 8px;
+    width: auto;
+    max-width: none;
+  }
+
+  .route-panel:not(.open) {
+    right: auto;
+    left: 8px;
+    bottom: 130px;
+    width: auto;
+  }
+
+  .support-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .support-item .button {
+    text-align: center;
+  }
+}
