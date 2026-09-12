@@ -1,5 +1,7 @@
 # Pitch — MapaSP
 
+> Fontes primárias de cada número: `docs/fontes-pitch.md`
+
 ## Versão ~60s (falada)
 
 Em São Paulo, 4 em cada 10 mulheres deixaram de sair à noite por medo da
