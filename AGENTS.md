@@ -137,6 +137,9 @@ POST /api/reports/{id}/confirm
 POST /api/ingest/message       {text, channel} -> classifica, geocodifica, cria/corrobora
 GET  /api/webhooks/whatsapp    verificação Meta (hub.mode/hub.verify_token/hub.challenge)
 POST /api/webhooks/whatsapp    Cloud API: texto -> pipeline; location -> riscos próximos
+POST /api/auth/register        {email, password} -> {token}; PBKDF2-SHA256
+POST /api/auth/login           -> {token} (sessão opaca em tabela sessions)
+GET/PUT /api/contacts          Bearer token; contatos de emergência da conta
 ```
 
 Ingestão de texto (grupos/WhatsApp): PII é descartada na entrada (telefone e
