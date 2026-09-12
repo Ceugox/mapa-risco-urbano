@@ -18,6 +18,21 @@ const LEVEL_LABEL: Record<string, string> = {
 };
 
 type Place = { lat: number; lng: number; label: string };
+type SavedRoute = { name: string; origin: Place; destination: Place; uses: number };
+
+const SAVED_KEY = "mapasp_saved_routes";
+
+function loadSaved(): SavedRoute[] {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function shortLabel(label: string) {
+  return label.split(",")[0].split("—")[0].trim();
+}
 
 export function RoutePanel({ reportMode }: { reportMode: boolean }) {
   const map = useMap();
@@ -32,6 +47,7 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
   const [routes, setRoutes] = useState<RouteResult[]>([]);
   const [selected, setSelected] = useState(0);
   const [status, setStatus] = useState("");
+  const [saved, setSaved] = useState<SavedRoute[]>(loadSaved);
   const linesRef = useRef<google.maps.Polyline[]>([]);
   const placesRef = useRef<google.maps.places.PlacesService | null>(null);
 
@@ -113,18 +129,45 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
     );
   }
 
-  async function trace() {
-    if (!origin || !destination) {
+  function persist(list: SavedRoute[]) {
+    setSaved(list);
+    localStorage.setItem(SAVED_KEY, JSON.stringify(list));
+  }
+
+  function saveCurrent() {
+    if (!origin || !destination) return;
+    const name = `${shortLabel(origin.label || originQ)} → ${shortLabel(destination.label || destQ)}`;
+    const next = [
+      { name, origin, destination, uses: 0 },
+      ...saved.filter((item) => item.name !== name),
+    ].slice(0, 6);
+    persist(next);
+    setStatus(`Rota salva: ${name}`);
+  }
+
+  function applySaved(item: SavedRoute) {
+    setOrigin(item.origin);
+    setOriginQ(shortLabel(item.origin.label));
+    setDestination(item.destination);
+    setDestQ(shortLabel(item.destination.label));
+    setSuggestions([]);
+    persist(
+      saved
+        .map((entry) => (entry === item ? { ...entry, uses: entry.uses + 1 } : entry))
+        .sort((a, b) => b.uses - a.uses),
+    );
+    trace(item.origin, item.destination);
+  }
+
+  async function trace(from = origin, to = destination) {
+    if (!from || !to) {
       setStatus("Informe origem e destino.");
       return;
     }
     setStatus("Calculando rotas…");
     setSuggestions([]);
     try {
-      const result = await getRoute(
-        { lat: origin.lat, lon: origin.lng },
-        { lat: destination.lat, lon: destination.lng },
-      );
+      const result = await getRoute({ lat: from.lat, lon: from.lng }, { lat: to.lat, lon: to.lng });
       setRoutes(result.routes);
       setSelected(0);
       setStatus("");
@@ -229,15 +272,45 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
             </ul>
           )}
           <div className="route-actions">
-            <button className="button primary" onClick={trace} type="button">
+            <button className="button primary" onClick={() => trace()} type="button">
               Traçar rota
             </button>
             {routes.length > 0 && (
-              <button className="button ghost" onClick={clear} type="button">
-                Limpar
-              </button>
+              <>
+                <button className="button ghost" onClick={saveCurrent} type="button">
+                  Salvar
+                </button>
+                <button className="button ghost" onClick={clear} type="button">
+                  Limpar
+                </button>
+              </>
             )}
           </div>
+          {saved.length > 0 && routes.length === 0 && (
+            <ul className="saved-routes" aria-label="Rotas salvas">
+              {saved.map((item) => (
+                <li key={item.name}>
+                  <button
+                    type="button"
+                    className="saved-route"
+                    onClick={() => applySaved(item)}
+                    title="Traçar esta rota"
+                  >
+                    {item.name}
+                    {item.uses > 1 && <span className="mono-label"> ×{item.uses}</span>}
+                  </button>
+                  <button
+                    type="button"
+                    className="saved-route-del"
+                    aria-label={`Remover ${item.name}`}
+                    onClick={() => persist(saved.filter((entry) => entry !== item))}
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           {status && <span className="route-status">{status}</span>}
           {routes.length > 0 && (
             <div className="route-results">

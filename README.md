@@ -1,7 +1,7 @@
-# Mapa de Risco Urbano — São Paulo
+# MapaSP — risco urbano de São Paulo
 
 MVP de um mapa cívico que combina alertas oficiais, previsão do tempo, crime
-agregado e relatos anônimos da comunidade. O backend usa FastAPI + SQLite
+agregado e relatos anônimos da comunidade. O backend usa FastAPI + SQLite (Postgres via DATABASE_URL)
 (WAL); o frontend usa Vite, React, TypeScript e Google Maps.
 
 ## Executar

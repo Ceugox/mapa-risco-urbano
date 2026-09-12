@@ -118,7 +118,7 @@ export default function App() {
       <header className="site-header">
         <nav className="nav container" aria-label="Navegação principal">
           <a className="brand" href="#inicio">
-            RISCO<span>SP</span>
+            MAPA<span>SP</span>
           </a>
           <div className="nav-links">
             <a href="#mapa">O mapa</a>
@@ -282,7 +282,7 @@ export default function App() {
       <footer className="footer">
         <div className="container footer-inner">
           <a className="brand" href="#inicio">
-            RISCO<span>SP</span>
+            MAPA<span>SP</span>
           </a>
           <p>Dados públicos para uma cidade mais informada.</p>
           <small>

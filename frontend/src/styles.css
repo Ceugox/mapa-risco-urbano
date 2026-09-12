@@ -1468,6 +1468,55 @@ h1 span {
   letter-spacing: 0.04em;
 }
 
+.saved-routes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 0 0;
+  list-style: none;
+  border-top: 1px solid var(--line-1);
+}
+
+.saved-routes li {
+  display: flex;
+  gap: 4px;
+}
+
+.saved-route {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line-1);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-route:hover {
+  border-color: var(--accent);
+  color: var(--fg-1);
+}
+
+.saved-route-del {
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-3);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.saved-route-del:hover {
+  color: var(--fg-1);
+}
+
 /* Pontos de apoio */
 .support-actions {
   display: flex;
