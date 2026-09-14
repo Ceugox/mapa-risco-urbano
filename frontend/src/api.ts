@@ -109,3 +109,65 @@ export function getContacts(token: string): Promise<{ contacts: Contact[]; email
 export function saveContacts(token: string, contacts: Contact[]): Promise<{ contacts: Contact[] }> {
   return authRequest("/contacts", { contacts }, token, "PUT");
 }
+
+export function track(name: string, meta: Record<string, unknown> = {}) {
+  try {
+    const body = JSON.stringify({ name, meta: { ...meta, referrer: document.referrer } });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(`${base}/api/events`, new Blob([body], { type: "application/json" }));
+    } else {
+      fetch(`${base}/api/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      }).catch(() => undefined);
+    }
+  } catch {
+    // Telemetria nunca pode quebrar a UI.
+  }
+}
+
+export interface AdminStats {
+  range: string;
+  generated_at: string;
+  kpi: {
+    page_views: number;
+    visitors: number;
+    api_calls: number;
+    errors: number;
+    error_rate: number;
+    p95_ms: number;
+    routes: number;
+    reports: number;
+    bots: number;
+    users_total: number;
+    reports_total: number;
+  };
+  series: {
+    bucket: string;
+    requests: number;
+    page_views: number;
+    visitors: number;
+    errors: number;
+  }[];
+  devices: Record<string, number>;
+  browsers: Record<string, number>;
+  referers: { name: string; count: number }[];
+  top_paths: { path: string; count: number }[];
+  events: { name: string; count: number }[];
+  recent_errors: { ts: string; method: string; path: string; status: number }[];
+}
+
+export function adminLogin(password: string): Promise<{ token: string }> {
+  return authRequest("/admin/login", { password });
+}
+
+export async function adminStats(token: string, range: string): Promise<AdminStats> {
+  const response = await fetch(`${base}/api/admin/stats?range=${range}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (response.status === 401) throw new Error("unauthorized");
+  if (!response.ok) throw new Error("Falha ao carregar estatísticas");
+  return response.json();
+}

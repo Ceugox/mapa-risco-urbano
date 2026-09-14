@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
-import { createReport } from "../api";
+import { createReport, track } from "../api";
 import { Feature } from "../types";
 
 const categories = [
@@ -36,6 +36,7 @@ export function ReportForm({
     event.preventDefault();
     try {
       const result = await createReport({ category, description, lat: point.lat, lon: point.lng });
+      track("report_created", { category });
       onCreated(result);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Erro ao enviar");

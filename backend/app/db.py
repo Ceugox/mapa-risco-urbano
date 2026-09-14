@@ -88,6 +88,12 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS sessions (
                 token TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS access_log (
+                ts TEXT NOT NULL, method TEXT NOT NULL, path TEXT NOT NULL,
+                status INTEGER NOT NULL, duration_ms REAL NOT NULL, visitor TEXT NOT NULL,
+                device TEXT NOT NULL, browser TEXT NOT NULL, referer TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS access_log_ts ON access_log(ts);
             """
         )
         if _postgres():
@@ -241,6 +247,11 @@ def create_session(token: str, user_id: str) -> None:
             "INSERT INTO sessions(token,user_id,created_at) VALUES(?,?,?)",
             (token, user_id, now_iso()),
         )
+
+
+def get_session(token: str):
+    with connection() as conn:
+        return conn.execute("SELECT * FROM sessions WHERE token=?", (token,)).fetchone()
 
 
 def get_user_by_token(token: str):

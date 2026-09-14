@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getLayer, getLayers } from "./api";
+import { getLayer, getLayers, track } from "./api";
 import { labels } from "./components/LayerPanel";
 import { MapView } from "./components/Map";
 import { EmergencyPanel } from "./components/EmergencyPanel";
@@ -88,11 +88,13 @@ export default function App() {
 
   const activateReport = () => {
     setReportMode(true);
+    track("report_mode_opened");
     focusMap();
   };
 
   useEffect(() => {
     refresh();
+    track("page_view", { w: window.innerWidth, h: window.innerHeight });
     const timer = window.setInterval(refresh, 60000);
     return () => window.clearInterval(timer);
   }, []);

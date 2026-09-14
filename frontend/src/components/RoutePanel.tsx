@@ -1,6 +1,6 @@
 import { Marker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { useEffect, useRef, useState } from "react";
-import { getRoute, RouteResult } from "../api";
+import { getRoute, RouteResult, track } from "../api";
 
 const SP_BOUNDS = { north: -23.3, south: -24.05, east: -46.3, west: -47.0 };
 const LEVEL_COLOR: Record<string, string> = {
@@ -171,6 +171,7 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
       setRoutes(result.routes);
       setSelected(0);
       setStatus("");
+      track("route_calculated", { level: result.routes[0]?.level, n: result.routes.length });
       if (maps && map) {
         const bounds = new google.maps.LatLngBounds();
         result.routes[0].geometry.coordinates.forEach(([lng, lat]) => bounds.extend({ lat, lng }));

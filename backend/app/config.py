@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     whatsapp_verify_token: str = ""
     whatsapp_token: str = ""
     whatsapp_phone_id: str = ""
+    admin_password: str = ""
+    analytics_salt: str = ""
+    analytics_retention_days: int = 90
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

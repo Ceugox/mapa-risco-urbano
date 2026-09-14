@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Contact, getContacts, login, register, saveContacts } from "../api";
+import { Contact, getContacts, login, register, saveContacts, track } from "../api";
 
 const KEY = "riscosp-contatos";
 const TOKEN_KEY = "mapasp_token";
@@ -109,6 +109,7 @@ export function EmergencyPanel() {
       return;
     }
     setStatus("Obtendo localização…");
+    track(safe ? "safe_message_sent" : "panic_pressed", { contacts: contacts.length });
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setStatus(safe ? "Abrindo WhatsApp…" : "Abrindo WhatsApp com sua localização…");
