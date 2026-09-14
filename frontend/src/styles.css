@@ -1707,3 +1707,62 @@ h1 span {
   font-family: var(--font-mono);
   font-size: 11px;
 }
+
+/* Modo de transporte e horário de saída (rota) */
+.route-mode,
+.route-depart {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line-1);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.route-mode-option,
+.route-depart-option {
+  flex: 1;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.route-mode-option.active,
+.route-depart-option.active {
+  background: var(--bg-2);
+  color: var(--fg-1);
+}
+
+.route-depart {
+  gap: 4px;
+}
+
+.route-depart-option {
+  flex: 0 0 auto;
+}
+
+.route-depart input[type="time"] {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line-1);
+  border-radius: 6px;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-size: 12px;
+}
+
+.route-depart input[type="time"]:disabled {
+  opacity: 0.5;
+}
+
+.route-night-note {
+  display: block;
+  padding-top: 4px;
+  color: var(--fg-3);
+}

@@ -36,6 +36,9 @@ backend/
   app/routers/admin.py     login de admin, GET /api/admin/stats, POST /api/events
   app/routers/trips.py     trajeto acompanhado ao vivo: POST /api/trips, POST /api/trips/{id}/position,
                            POST /api/trips/{id}/finish, GET /api/trips/shared/{share_token}
+  app/routers/route.py     POST /api/route (mode driving/walking, depart_at)
+  app/routing.py           fetch_routes (OSRM) e score_route (pesos por camada,
+                           ajustados por modo/horário em time_weights)
   app/analytics.py         middleware ASGI de acesso (buffer em memória -> access_log),
                            agregação por período, retenção; sem IP persistido
   app/ingest.py            classificador + extração de local + dedup/corroboração
@@ -164,6 +167,11 @@ GET  /api/layers/{layer}         GeoJSON FeatureCollection
 POST /api/reports                {lat, lng, category, description}
 GET  /api/reports
 POST /api/reports/{id}/confirm
+POST /api/route                {origin, destination, mode, depart_at} -> rotas com score de
+                                risco; mode "driving" (OSRM router.project-osrm.org) ou
+                                "walking" (OSRM FOSSGIS routed-foot); depart_at ISO 8601
+                                opcional (default: agora), usado com fuso America/Sao_Paulo
+                                para ajustar os pesos por horário (ver regra 4)
 POST /api/ingest/message       {text, channel} -> classifica, geocodifica, cria/corrobora
 GET  /api/webhooks/whatsapp    verificação Meta (hub.mode/hub.verify_token/hub.challenge)
 POST /api/webhooks/whatsapp    Cloud API: texto -> pipeline; location -> riscos próximos
