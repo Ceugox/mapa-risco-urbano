@@ -3,6 +3,7 @@ import { LayerName, LayerStatus } from "../types";
 
 export const layerNames: LayerName[] = [
   "alagamento",
+  "alagamento_hist",
   "cemaden",
   "inmet",
   "clima",
@@ -11,6 +12,7 @@ export const layerNames: LayerName[] = [
 ];
 export const labels: Record<LayerName, string> = {
   alagamento: "Alagamentos",
+  alagamento_hist: "Alagamentos recorrentes",
   cemaden: "CEMADEN",
   inmet: "Alertas INMET",
   clima: "Clima",
@@ -19,6 +21,7 @@ export const labels: Record<LayerName, string> = {
 };
 export const layerColors: Record<LayerName, string> = {
   alagamento: "#3b82f6",
+  alagamento_hist: "rgba(59, 130, 246, 0.45)",
   cemaden: "#f97316",
   inmet: "#ef4444",
   clima: "#0f172a",
@@ -78,7 +81,7 @@ export function LayerPanel({
                 aria-label={`${labels[layer]} ${enabled[layer] ? "ativada" : "desativada"}`}
               />
               <span
-                className="layer-swatch"
+                className={`layer-swatch${layer === "alagamento_hist" ? " layer-swatch-dashed" : ""}`}
                 style={available ? { backgroundColor: layerColors[layer] } : undefined}
                 aria-hidden="true"
               />

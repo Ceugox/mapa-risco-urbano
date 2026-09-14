@@ -1766,3 +1766,15 @@ h1 span {
   padding-top: 4px;
   color: var(--fg-3);
 }
+
+.layer-swatch-dashed {
+  border: 1px dashed currentColor;
+  background-image: repeating-linear-gradient(
+    45deg,
+    currentColor 0,
+    currentColor 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  opacity: 0.85;
+}

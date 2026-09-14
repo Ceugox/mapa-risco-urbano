@@ -8,13 +8,22 @@ import { SupportPanel } from "./components/SupportPanel";
 import { Feature, FeatureCollection, LayerName, LayerStatus } from "./types";
 import "./styles.css";
 
-const layers: LayerName[] = ["alagamento", "cemaden", "inmet", "clima", "crime", "reports"];
-const initial = Object.fromEntries(layers.map((layer) => [layer, layer !== "crime"])) as Record<
-  LayerName,
-  boolean
->;
+const layers: LayerName[] = [
+  "alagamento",
+  "alagamento_hist",
+  "cemaden",
+  "inmet",
+  "clima",
+  "crime",
+  "reports",
+];
+const OFF_BY_DEFAULT: LayerName[] = ["crime", "alagamento_hist"];
+const initial = Object.fromEntries(
+  layers.map((layer) => [layer, !OFF_BY_DEFAULT.includes(layer)]),
+) as Record<LayerName, boolean>;
 const sources: Record<LayerName, string> = {
   alagamento: "CGE-SP",
+  alagamento_hist: "CGE-SP, histórico",
   cemaden: "CEMADEN",
   inmet: "INMET",
   clima: "Open-Meteo",
@@ -23,6 +32,7 @@ const sources: Record<LayerName, string> = {
 };
 const frequencies: Record<LayerName, string> = {
   alagamento: "5 min",
+  alagamento_hist: "30 dias",
   cemaden: "10 min",
   inmet: "10 min",
   clima: "15 min",
@@ -31,6 +41,7 @@ const frequencies: Record<LayerName, string> = {
 };
 const coverage: Record<LayerName, string> = {
   alagamento: "capital",
+  alagamento_hist: "capital",
   cemaden: "estado SP",
   inmet: "estado SP",
   clima: "5 pontos na capital",

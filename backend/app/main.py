@@ -19,7 +19,7 @@ from .collectors.cge import collect as collect_cge
 from .collectors.inmet import collect as collect_inmet
 from .collectors.meteo import collect as collect_meteo
 from .config import settings
-from .db import get_reports, init_db, store_snapshot
+from .db import get_reports, init_db, purge_flood_history, store_snapshot
 from .routers.admin import router as admin_router
 from .routers.auth import router as auth_router
 from .routers.ingest import router as ingest_router
@@ -71,6 +71,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(lambda: asyncio.create_task(asyncio.to_thread(run_collector, "clima", collect_meteo)), "interval", seconds=settings.meteo_interval, id="meteo", max_instances=1)
     scheduler.add_job(lambda: asyncio.create_task(asyncio.to_thread(analytics.flush)), "interval", seconds=15, id="analytics_flush", max_instances=1)
     scheduler.add_job(lambda: asyncio.create_task(asyncio.to_thread(analytics.purge, settings.analytics_retention_days)), "interval", hours=6, id="analytics_purge", max_instances=1)
+    scheduler.add_job(lambda: asyncio.create_task(asyncio.to_thread(purge_flood_history, 90)), "interval", hours=6, id="flood_history_purge", max_instances=1)
     scheduler.start()
     asyncio.create_task(collect_all())
     yield

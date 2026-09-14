@@ -4,6 +4,7 @@ import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
+from itertools import pairwise
 from pathlib import Path
 
 import psycopg
@@ -102,6 +103,11 @@ def init_db() -> None:
                 device TEXT NOT NULL, browser TEXT NOT NULL, referer TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS access_log_ts ON access_log(ts);
+            CREATE TABLE IF NOT EXISTS flood_history (
+                key TEXT NOT NULL, name TEXT, lat REAL NOT NULL, lon REAL NOT NULL,
+                seen_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS flood_history_key_seen ON flood_history(key, seen_at);
             """
         )
         if _postgres():
@@ -314,3 +320,71 @@ def finish_trip(trip_id: str) -> None:
         conn.execute(
             "UPDATE trips SET finished_at=? WHERE id=?", (now_iso(), trip_id)
         )
+
+
+def _flood_key(name: str, lat: float, lon: float) -> str:
+    from .collectors.geocoding import normaliza
+
+    normalized = normaliza(name) if name else ""
+    return f"{normalized}|{round(lat, 4):.4f}|{round(lon, 4):.4f}"
+
+
+def record_flood_points(points: list[dict], seen_at: str) -> None:
+    cutoff = (datetime.fromisoformat(seen_at) - timedelta(minutes=30)).isoformat()
+    with connection() as conn:
+        for point in points:
+            geometry = point.get("geometry") or {}
+            coordinates = geometry.get("coordinates") or []
+            if len(coordinates) != 2:
+                continue
+            lon, lat = coordinates
+            properties = point.get("properties") or {}
+            name = properties.get("via") or properties.get("referencia") or ""
+            key = _flood_key(name, lat, lon)
+            existing = conn.execute(
+                "SELECT 1 FROM flood_history WHERE key=? AND seen_at>? LIMIT 1",
+                (key, cutoff),
+            ).fetchone()
+            if existing:
+                continue
+            conn.execute(
+                "INSERT INTO flood_history(key,name,lat,lon,seen_at) VALUES(?,?,?,?,?)",
+                (key, name, round(lat, 4), round(lon, 4), seen_at),
+            )
+
+
+def flood_recurrence(days: int = 30) -> list[dict]:
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    with connection() as conn:
+        rows = conn.execute(
+            "SELECT key,name,lat,lon,seen_at FROM flood_history WHERE seen_at>? ORDER BY key,seen_at",
+            (since,),
+        ).fetchall()
+    grouped: dict[str, list[dict]] = {}
+    for row in rows:
+        grouped.setdefault(row["key"], []).append(dict(row))
+    result = []
+    for key, items in grouped.items():
+        episodes = 1
+        for previous, current in pairwise(items):
+            gap_hours = (
+                datetime.fromisoformat(current["seen_at"]) - datetime.fromisoformat(previous["seen_at"])
+            ).total_seconds() / 3600
+            if gap_hours > 2:
+                episodes += 1
+        last = items[-1]
+        result.append({
+            "key": key, "name": last["name"], "lat": last["lat"], "lon": last["lon"],
+            "episodes": episodes, "last_seen": last["seen_at"],
+        })
+    return result
+
+
+def purge_flood_history(days: int = 90) -> int:
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    with connection() as conn:
+        before = conn.execute(
+            "SELECT COUNT(*) AS n FROM flood_history WHERE seen_at<?", (cutoff,)
+        ).fetchone()["n"]
+        conn.execute("DELETE FROM flood_history WHERE seen_at<?", (cutoff,))
+    return before
