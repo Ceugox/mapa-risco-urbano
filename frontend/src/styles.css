@@ -1354,10 +1354,14 @@ h1 span {
 }
 
 /* Route panel — pill colapsável dentro do mapa (topo direito) */
+/* Abaixo da .map-toolbar, não em cima dela: as duas dividiam o canto
+   superior direito (top 16 / right 16) e o botão Reportar ficava por cima,
+   capturando o clique. No mobile a media query já dava um canto próprio ao
+   painel, então o bug só aparecia no desktop. A toolbar ocupa até 57px. */
 .route-panel {
   position: absolute;
   z-index: 6;
-  top: 16px;
+  top: 69px;
   right: 16px;
   width: 300px;
   max-width: calc(100% - 32px);
