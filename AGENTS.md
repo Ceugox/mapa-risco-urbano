@@ -34,6 +34,8 @@ backend/
   app/routers/ingest.py    POST /api/ingest/message (texto livre -> relato)
   app/routers/whatsapp.py  webhook Cloud API (GET verifica, POST recebe)
   app/routers/admin.py     login de admin, GET /api/admin/stats, POST /api/events
+  app/routers/trips.py     trajeto acompanhado ao vivo: POST /api/trips, POST /api/trips/{id}/position,
+                           POST /api/trips/{id}/finish, GET /api/trips/shared/{share_token}
   app/analytics.py         middleware ASGI de acesso (buffer em memória -> access_log),
                            agregação por período, retenção; sem IP persistido
   app/ingest.py            classificador + extração de local + dedup/corroboração
@@ -41,11 +43,13 @@ backend/
   data/crime_h3.json       camada criminal agregada (H3 r8, versionada, ~730 KB)
   tests/test_parsers.py
 frontend/
-  src/main.tsx             escolhe App (site) ou AdminApp quando o path é /admin
+  src/main.tsx             escolhe App (site), AdminApp (/admin) ou TripPage (/t/<token>)
   src/App.tsx              nav, hero, mapa, ticker, "Como funciona", "Fontes e método", footer
   src/admin/AdminApp.tsx   painel do admin: login por senha, KPIs, gráfico SVG, rankings, erros
+  src/trip/TripPage.tsx    página pública do trajeto acompanhado (share_token), sem nav do site
   src/components/Map.tsx   Google Maps + TrafficLayer, marcadores, polígonos, InfoWindow, modo Reportar
   src/components/LayerPanel.tsx   painel de camadas (switches, idade, contagem, status)
+  src/components/RoutePanel.tsx   traça rota e compartilha trajeto ao vivo (link /t/<token>)
   src/components/ReportForm.tsx   modal de relato
   src/api.ts, src/types.ts
   src/styles.css           tokens do design system e todo o CSS
@@ -152,6 +156,10 @@ POST /api/events               {name, meta} -> 204; evento do frontend (page_vie
 POST /api/auth/register        {email, password} -> {token}; PBKDF2-SHA256
 POST /api/auth/login           -> {token} (sessão opaca em tabela sessions)
 GET/PUT /api/contacts          Bearer token; contatos de emergência da conta
+POST /api/trips                 {destination:{lat,lon,label?}, duration_min?} -> {id,share_token,update_token,expires_at}
+POST /api/trips/{id}/position   {lat, lon, update_token} -> 204; valida token/expiração/bbox
+POST /api/trips/{id}/finish     {update_token} -> 204; marca finished_at
+GET  /api/trips/shared/{token}  {destination, last_position, finished_at, expires_at, active}; nunca expõe update_token
 ```
 
 Ingestão de texto (grupos/WhatsApp): PII é descartada na entrada (telefone e
