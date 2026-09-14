@@ -8,12 +8,7 @@ const API_CACHE = "mapasp-api";
 const VERSIONED_PREFIXES = ["mapasp-shell-", "mapasp-assets-"];
 const SHELL_URL = "/index.html";
 
-const NEVER_CACHE_PREFIXES = [
-  "/api/admin",
-  "/api/events",
-  "/api/auth",
-  "/api/contacts",
-];
+const NEVER_CACHE_PREFIXES = ["/api/admin", "/api/events", "/api/auth", "/api/contacts"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -60,7 +55,8 @@ function withCacheHeader(response) {
 async function networkFirstNavigate(request) {
   try {
     const response = await fetch(request);
-    if (response && response.ok) {
+    const type = response ? response.headers.get("content-type") || "" : "";
+    if (response && response.ok && type.includes("text/html")) {
       const cache = await caches.open(SHELL_CACHE);
       cache.put(SHELL_URL, response.clone());
     }

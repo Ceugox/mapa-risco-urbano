@@ -155,8 +155,9 @@ export default function App() {
     setInstallPrompt(null);
   };
 
-  const activeSources = statuses.filter((status) => status.ok).length;
-  const unavailableCount = statuses.filter((status) => !status.ok).length;
+  const liveStatuses = statuses.filter((status) => status.layer !== "alagamento_hist");
+  const activeSources = liveStatuses.filter((status) => status.ok).length;
+  const unavailableCount = liveStatuses.filter((status) => !status.ok).length;
   const metrics = useMemo(() => {
     const flood = statuses.find((status) => status.layer === "alagamento")?.count ?? 0;
     const cemaden = statuses.find((status) => status.layer === "cemaden")?.count ?? 0;

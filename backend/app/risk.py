@@ -2,6 +2,7 @@ import json
 from statistics import mean
 
 import h3
+from shapely.geometry import Point, shape
 
 from .db import distance_m, get_snapshot, now_iso
 
@@ -10,10 +11,13 @@ DEFAULT_RADIUS_M = 800
 
 # Camadas de ponto/polígono: contamos ocorrências dentro do disco H3 e
 # guardamos a distância até a mais próxima.
-POINT_LAYERS = ("alagamento", "cemaden", "inmet", "clima", "reports")
+POINT_LAYERS = ("alagamento", "cemaden", "reports")
 
 # Peso de cada ocorrência no score (0-100, mesma escala de app/routing.py).
-WEIGHTS = {"alagamento": 8, "cemaden": 12, "inmet": 10, "clima": 5, "reports": 10, "crime": 2}
+WEIGHTS = {"alagamento": 8, "cemaden": 12, "inmet": 10, "reports": 10}
+# Crime é um agregado de meses, não um evento: entra como parcela fixa, para
+# não saturar um indicador que a UI apresenta como "aqui e agora".
+CRIME_POINTS = {"acima": 20, "dentro": 10}
 
 NOUNS = {
     "alagamento": ("ponto", "pontos", "de alagamento"),
@@ -67,6 +71,24 @@ def _point_layer_item(layer: str, payload: dict, lat: float, lon: float, disk: s
     return {"layer": layer, "count": count, "label": label, "nearest_m": nearest_m}
 
 
+def _inmet_item(payload: dict, lat: float, lon: float) -> dict | None:
+    here = Point(lon, lat)
+    count = 0
+    for feature in payload.get("features", []):
+        geometry = feature.get("geometry")
+        if not geometry:
+            continue
+        try:
+            if shape(geometry).covers(here):
+                count += 1
+        except (ValueError, TypeError):
+            continue
+    if count == 0:
+        return None
+    noun = "aviso" if count == 1 else "avisos"
+    return {"layer": "inmet", "count": count, "label": f"{count} {noun} INMET cobrindo este ponto", "nearest_m": 0}
+
+
 def _crime_item(payload: dict, lat: float, lon: float, disk: set) -> dict | None:
     features = payload.get("features", [])
     if not features:
@@ -89,9 +111,19 @@ def _crime_item(payload: dict, lat: float, lon: float, disk: set) -> dict | None
             nearest = distance
     if matched_total == 0:
         return None
-    label = "crime: célula acima da média" if matched_total > average else "crime: célula dentro da média"
+    band = "acima" if matched_total > average else "dentro"
+    label = f"crime: célula {band} da média"
     nearest_m = round(nearest) if nearest is not None else None
-    return {"layer": "crime", "count": matched_total, "label": label, "nearest_m": nearest_m}
+    return {
+        "layer": "crime", "count": matched_total, "label": label,
+        "nearest_m": nearest_m, "points": CRIME_POINTS[band],
+    }
+
+
+def _points(item: dict) -> int:
+    if item["layer"] == "crime":
+        return item["points"]
+    return WEIGHTS[item["layer"]] * item["count"]
 
 
 def summarize(lat: float, lon: float, radius_m: float = DEFAULT_RADIUS_M) -> dict:
@@ -116,6 +148,13 @@ def summarize(lat: float, lon: float, radius_m: float = DEFAULT_RADIUS_M) -> dic
         if item:
             items.append(item)
 
+    inmet_row = get_snapshot("inmet")
+    if inmet_row and inmet_row["ok"]:
+        fetched_ats.append(inmet_row["fetched_at"])
+        item = _inmet_item(_payload(inmet_row), lat, lon)
+        if item:
+            items.append(item)
+
     crime_row = get_snapshot("crime")
     if crime_row and crime_row["ok"]:
         fetched_ats.append(crime_row["fetched_at"])
@@ -123,7 +162,7 @@ def summarize(lat: float, lon: float, radius_m: float = DEFAULT_RADIUS_M) -> dic
         if item:
             items.append(item)
 
-    score = min(100, sum(WEIGHTS[item["layer"]] * item["count"] for item in items))
+    score = min(100, sum(_points(item) for item in items))
     level = "baixo" if score < 20 else "moderado" if score < 45 else "alto"
 
     updated_at = max(fetched_ats) if fetched_ats else now_iso()

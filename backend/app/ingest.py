@@ -9,9 +9,10 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from shapely.geometry import shape
 
-from .collectors.geocoding import TIPOS, cached_resolve, normaliza
+from .collectors.geocoding import cached_resolve
 from .db import corroborate_report, find_nearby_report, insert_report
 from .routers.reports import BBOX
+from .text import TIPOS, normaliza
 
 WFS = "http://wfs.geosampa.prefeitura.sp.gov.br/geoserver/geoportal/wfs"
 CORROBORATE_RADIUS_M = 400.0

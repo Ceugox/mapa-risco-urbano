@@ -4,8 +4,6 @@ import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-mimetypes.add_type("application/manifest+json", ".webmanifest")
-
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,7 +17,7 @@ from .collectors.cge import collect as collect_cge
 from .collectors.inmet import collect as collect_inmet
 from .collectors.meteo import collect as collect_meteo
 from .config import settings
-from .db import get_reports, init_db, purge_flood_history, store_snapshot
+from .db import get_reports, init_db, purge_flood_history, purge_trips, store_snapshot
 from .routers.admin import router as admin_router
 from .routers.auth import router as auth_router
 from .routers.ingest import router as ingest_router
@@ -30,6 +28,8 @@ from .routers.route import router as route_router
 from .routers.support import router as support_router
 from .routers.trips import router as trips_router
 from .routers.whatsapp import router as whatsapp_router
+
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 
 def _reports_payload():
@@ -81,6 +81,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(maintenance_job, "interval", args=[analytics.flush], seconds=15, id="analytics_flush", max_instances=1)
     scheduler.add_job(maintenance_job, "interval", args=[analytics.purge, settings.analytics_retention_days], hours=6, id="analytics_purge", max_instances=1)
     scheduler.add_job(maintenance_job, "interval", args=[purge_flood_history, 90], hours=6, id="flood_history_purge", max_instances=1)
+    scheduler.add_job(maintenance_job, "interval", args=[purge_trips, 24], hours=1, id="trips_purge", max_instances=1)
     scheduler.start()
     asyncio.create_task(collect_all())
     yield

@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 
 from ..db import confirm_report, get_reports, insert_report, store_snapshot
+from ..netutil import client_ip
 
 router = APIRouter(prefix="/api/reports")
 BBOX = (-24.1, -46.9, -23.3, -46.3)
@@ -47,7 +48,7 @@ def _feature(report: dict):
 def create_report(data: ReportIn, request: Request):
     if not (BBOX[0] <= data.lat <= BBOX[2] and BBOX[1] <= data.lon <= BBOX[3]):
         raise HTTPException(422, "coordenada fora da área de São Paulo")
-    ip = request.client.host if request.client else "unknown"
+    ip = client_ip(request)
     now = time.time()
     while rate[ip] and rate[ip][0] < now - 3600:
         rate[ip].popleft()
@@ -76,7 +77,7 @@ def list_reports():
 
 @router.post("/{report_id}/confirm")
 def confirm(report_id: str, request: Request):
-    ip = request.client.host if request.client else "unknown"
+    ip = client_ip(request)
     if ip in confirmed[report_id]:
         raise HTTPException(409, "relato já confirmado neste IP")
     value = confirm_report(report_id)

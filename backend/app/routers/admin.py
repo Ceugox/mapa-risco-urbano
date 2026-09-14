@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from .. import analytics, db
 from ..config import settings
+from ..netutil import client_ip
 
 router = APIRouter(prefix="/api")
 rate: dict[str, deque[float]] = defaultdict(deque)
@@ -69,8 +70,7 @@ def track(data: EventIn, request: Request):
     if not EVENT_NAME.match(data.name):
         raise HTTPException(422, "nome de evento inválido")
     headers = request.headers
-    forwarded = headers.get("x-forwarded-for", "")
-    ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "")
+    ip = client_ip(request)
     analytics.record(
         analytics.entry(
             method="EVENT", path=data.name, status=0, duration_ms=0, ip=ip,

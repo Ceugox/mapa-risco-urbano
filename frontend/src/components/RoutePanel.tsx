@@ -8,6 +8,7 @@ import {
   RouteResult,
   sendTripPosition,
   track,
+  TripGoneError,
 } from "../api";
 import { Place, searchPlaces } from "../places";
 
@@ -133,7 +134,14 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
           pos.coords.latitude,
           pos.coords.longitude,
           trip.update_token,
-        ).catch(() => {});
+        ).catch((error) => {
+          if (error instanceof TripGoneError) {
+            stopWatch();
+            localStorage.removeItem(TRIP_KEY);
+            setActiveTrip(null);
+            setTripStatus("O trajeto compartilhado expirou.");
+          }
+        });
       },
       () => {},
       { enableHighAccuracy: true, maximumAge: 10000 },
@@ -156,7 +164,7 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
           lon: destination.lng,
           label: shortLabel(destination.label || destQ),
         },
-        route?.duration_min,
+        route ? Math.max(30, Math.round(route.duration_min * 2)) : undefined,
       );
       const trip: ActiveTrip = {
         id: created.id,
@@ -326,7 +334,7 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
     }
     if (origin && destination) trace();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, departChoice, departTime]);
+  }, [mode, departChoice]);
 
   useEffect(() => {
     if (!map || !maps) return;
@@ -427,6 +435,9 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
               value={departTime}
               disabled={departChoice !== "at"}
               onChange={(e) => setDepartTime(e.target.value)}
+              onBlur={() => {
+                if (departChoice === "at" && origin && destination) trace();
+              }}
               aria-label="Horário de saída"
             />
           </div>

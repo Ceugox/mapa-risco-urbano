@@ -34,7 +34,7 @@ def _depart_hour(depart_at: str | None) -> int:
     if depart_at is None:
         return datetime.now(SP_TZ).hour
     try:
-        parsed = datetime.fromisoformat(depart_at)
+        parsed = datetime.fromisoformat(depart_at.replace("Z", "+00:00"))
     except ValueError as exc:
         raise HTTPException(422, "depart_at inválido; use ISO 8601") from exc
     if parsed.tzinfo is None:

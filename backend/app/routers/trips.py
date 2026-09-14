@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from .. import db
+from ..netutil import client_ip
 from .reports import BBOX
 
 router = APIRouter(prefix="/api/trips")
@@ -70,8 +71,7 @@ class FinishIn(BaseModel):
 def create_trip(data: TripIn, request: Request):
     if not _inside_bbox(data.destination.lat, data.destination.lon):
         raise HTTPException(422, "destino fora da área de São Paulo")
-    ip = request.client.host if request.client else "unknown"
-    _throttle(ip)
+    _throttle(client_ip(request))
     minutes = min(data.duration_min or DEFAULT_MINUTES, MAX_MINUTES)
     created = datetime.now(timezone.utc)
     expires_at = (created + timedelta(minutes=minutes)).isoformat()
@@ -117,12 +117,13 @@ def shared_trip(share_token: str):
     trip = db.get_trip_by_share_token(share_token)
     if not trip:
         raise HTTPException(404, "trajeto não encontrado")
+    active = not trip["finished_at"] and not _expired(trip)
     last_position = None
-    if trip["last_lat"] is not None and trip["last_lon"] is not None:
+    # Depois de encerrado ou expirado, o link deixa de expor onde a pessoa está.
+    if active and trip["last_lat"] is not None and trip["last_lon"] is not None:
         last_position = {
             "lat": trip["last_lat"], "lon": trip["last_lon"], "at": trip["last_at"],
         }
-    active = not trip["finished_at"] and not _expired(trip)
     return {
         "destination": {
             "lat": trip["destination_lat"],

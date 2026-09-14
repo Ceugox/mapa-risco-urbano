@@ -12,11 +12,10 @@ WEIGHTS = {"crime": 40, "alagamento": 20, "cemaden": 15, "reports": 15, "inmet":
 NEAR_M = {"alagamento": 300.0, "reports": 300.0, "cemaden": 1000.0}
 CRIME_PER_KM_FULL = 30.0
 
-# Pesos base do score sensível a modo/horário (ver time_weights). Escala
-# própria, independente de WEIGHTS: score_route normaliza qualquer dict de
-# pesos para somar 100 pontos, então a proporção entre camadas é o que
-# importa aqui, não o valor absoluto.
-BASE_TIME_WEIGHTS = {"crime": 1.0, "alagamento": 3.0, "cemaden": 2.0, "reports": 2.0, "inmet": 5.0}
+# Pesos base do score sensível a modo/horário (ver time_weights): parte da
+# mesma proporção de WEIGHTS, e os multiplicadores de modo e hora incidem
+# sobre ela. score_route normaliza qualquer dict para somar 100 pontos.
+BASE_TIME_WEIGHTS = {layer: float(value) for layer, value in WEIGHTS.items()}
 
 
 def fetch_routes(

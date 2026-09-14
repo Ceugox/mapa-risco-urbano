@@ -63,6 +63,7 @@ def test_pontos_distintos_nao_se_misturam(tmpdb):
 def test_geojson_da_camada(tmpdb, monkeypatch):
     now = datetime.now(timezone.utc).isoformat()
     db.record_flood_points([_feature()], now)
+    db.store_snapshot("alagamento", {"type": "FeatureCollection", "features": []})
     payload = layers.get_layer("alagamento_hist")
     assert payload["type"] == "FeatureCollection"
     assert len(payload["features"]) == 1
@@ -74,14 +75,22 @@ def test_geojson_da_camada(tmpdb, monkeypatch):
     assert props["days"] == 30
     assert payload["_metadata"]["layer"] == "alagamento_hist"
     assert payload["_metadata"]["ok"] is True
+    assert payload["_metadata"]["fetched_at"] == db.get_snapshot("alagamento")["fetched_at"]
 
 
 def test_lista_de_camadas_inclui_alagamento_hist(tmpdb):
     db.record_flood_points([_feature()], datetime.now(timezone.utc).isoformat())
     result = layers.list_layers()
     row = next(r for r in result if r["layer"] == "alagamento_hist")
-    assert row["ok"] is True
+    # Camada derivada: sem coleta do CGE ainda, não se apresenta como fonte viva.
+    assert row["ok"] is False
+    assert row["fetched_at"] is None
     assert row["count"] == 1
+
+    db.store_snapshot("alagamento", {"type": "FeatureCollection", "features": []})
+    row = next(r for r in layers.list_layers() if r["layer"] == "alagamento_hist")
+    assert row["ok"] is True
+    assert row["fetched_at"] == db.get_snapshot("alagamento")["fetched_at"]
 
 
 def test_retencao_apaga_linhas_com_mais_de_90_dias(tmpdb):

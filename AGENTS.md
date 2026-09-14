@@ -45,6 +45,8 @@ backend/
   app/routers/route.py     POST /api/route (mode driving/walking, depart_at)
   app/routing.py           fetch_routes (OSRM) e score_route (pesos por camada,
                            ajustados por modo/horário em time_weights)
+  app/text.py              normaliza() de logradouros (sem dependências; usado por db, geocoding, ingest)
+  app/netutil.py           client_ip(): primeiro salto do X-Forwarded-For atrás do proxy do Railway
   app/analytics.py         middleware ASGI de acesso (buffer em memória -> access_log),
                            agregação por período, retenção; sem IP persistido
   app/ingest.py            classificador + extração de local + dedup/corroboração

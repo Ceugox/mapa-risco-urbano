@@ -79,23 +79,23 @@ class TestTimeWeights:
 
     def test_a_pe_dobra_crime_e_aumenta_alagamento(self):
         weights = routing.time_weights("walking", 12)
-        assert weights["crime"] == pytest.approx(2.0)
-        assert weights["alagamento"] == pytest.approx(4.5)
+        assert weights["crime"] == pytest.approx(80.0)
+        assert weights["alagamento"] == pytest.approx(30.0)
         assert weights["cemaden"] == routing.BASE_TIME_WEIGHTS["cemaden"]
 
     def test_noite_inicio_aumenta_crime_25_por_cento(self):
         weights = routing.time_weights("driving", 19)
-        assert weights["crime"] == pytest.approx(1.25)
+        assert weights["crime"] == pytest.approx(50.0)
 
     def test_madrugada_aumenta_crime_50_por_cento(self):
         weights = routing.time_weights("driving", 23)
-        assert weights["crime"] == pytest.approx(1.5)
+        assert weights["crime"] == pytest.approx(60.0)
         weights_cedo = routing.time_weights("driving", 4)
-        assert weights_cedo["crime"] == pytest.approx(1.5)
+        assert weights_cedo["crime"] == pytest.approx(60.0)
 
     def test_a_pe_de_madrugada_acumula_multiplicadores(self):
         weights = routing.time_weights("walking", 23)
-        assert weights["crime"] == pytest.approx(1.0 * 2.0 * 1.5)
+        assert weights["crime"] == pytest.approx(40.0 * 2.0 * 1.5)
 
 
 def test_score_route_normaliza_pesos_customizados_para_100(monkeypatch):

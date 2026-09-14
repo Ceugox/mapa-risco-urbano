@@ -246,7 +246,17 @@ export async function sendTripPosition(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ lat, lon, update_token: updateToken }),
   });
+  if (response.status === 403 || response.status === 404 || response.status === 410) {
+    throw new TripGoneError();
+  }
   if (!response.ok) throw new Error("Não foi possível enviar a posição");
+}
+
+export class TripGoneError extends Error {
+  constructor() {
+    super("Trajeto encerrado ou expirado");
+    this.name = "TripGoneError";
+  }
 }
 
 export async function finishTrip(tripId: string, updateToken: string): Promise<void> {

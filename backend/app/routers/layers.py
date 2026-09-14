@@ -2,7 +2,7 @@ import json
 
 from fastapi import APIRouter, HTTPException
 
-from ..db import flood_recurrence, get_snapshot, now_iso
+from ..db import flood_recurrence, get_snapshot
 
 router = APIRouter(prefix="/api/layers")
 LAYERS = ["alagamento", "cemaden", "inmet", "clima", "crime", "reports", "alagamento_hist"]
@@ -31,10 +31,13 @@ def list_layers():
     result = []
     for layer in LAYERS:
         if layer == "alagamento_hist":
-            count = _count(_flood_hist_payload())
+            # Camada derivada: sua idade é a da última coleta do CGE, não "agora".
+            source = get_snapshot("alagamento")
             result.append({
-                "layer": layer, "fetched_at": now_iso(), "source_updated_at": None,
-                "ok": True, "error": None, "count": count,
+                "layer": layer, "fetched_at": source["fetched_at"] if source else None,
+                "source_updated_at": None, "ok": bool(source and source["ok"]),
+                "error": source["error"] if source else "Aguardando coleta",
+                "count": _count(_flood_hist_payload()),
             })
             continue
         row = get_snapshot(layer)
@@ -53,9 +56,11 @@ def get_layer(layer: str):
         raise HTTPException(404, "Camada não encontrada")
     if layer == "alagamento_hist":
         payload = _flood_hist_payload()
+        source = get_snapshot("alagamento")
         payload["_metadata"] = {
-            "layer": layer, "fetched_at": now_iso(), "source_updated_at": None,
-            "ok": True, "error": None,
+            "layer": layer, "fetched_at": source["fetched_at"] if source else None,
+            "source_updated_at": None, "ok": bool(source and source["ok"]),
+            "error": source["error"] if source else None,
         }
         return payload
     row = get_snapshot(layer)

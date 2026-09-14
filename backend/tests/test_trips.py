@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from app import db
 from app.routers import trips
 
-REQ = SimpleNamespace(client=SimpleNamespace(host="test-ip"))
+REQ = SimpleNamespace(client=SimpleNamespace(host="test-ip"), headers={})
 DEST = trips.DestinationIn(lat=-23.55, lon=-46.63, label="Casa")
 FORA_DA_BBOX = trips.DestinationIn(lat=-22.9, lon=-43.2, label="Rio")
 

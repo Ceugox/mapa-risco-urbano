@@ -85,6 +85,51 @@ class TestSummarize:
         assert item["label"] == "crime: célula acima da média"
         assert item["nearest_m"] == 0
 
+    def test_crime_realista_nao_satura_o_score(self, tmpdb):
+        db.store_snapshot("crime", {"type": "FeatureCollection", "features": [
+            _crime_cell(ORIGIN, 300),
+            _crime_cell(NEIGHBOR, 120),
+            _crime_cell(FAR, 50),
+        ]})
+        result = risk.summarize(QUERY_LAT, QUERY_LON)
+        item = next(item for item in result["items"] if item["layer"] == "crime")
+        assert item["count"] == 300
+        assert result["score"] == risk.CRIME_POINTS["acima"] == 20
+        assert result["level"] == "moderado"
+
+    def test_clima_nao_conta_como_risco(self, tmpdb):
+        db.store_snapshot("clima", {"type": "FeatureCollection", "features": [
+            _point(QUERY_LAT, QUERY_LON, temperatura=22.5),
+        ]})
+        result = risk.summarize(QUERY_LAT, QUERY_LON)
+        assert result["items"] == []
+        assert result["score"] == 0
+
+    def test_inmet_conta_quando_o_poligono_cobre_o_ponto(self, tmpdb):
+        big = {
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [[
+                [QUERY_LON - 1, QUERY_LAT - 1], [QUERY_LON + 1, QUERY_LAT - 1],
+                [QUERY_LON + 1, QUERY_LAT + 1], [QUERY_LON - 1, QUERY_LAT + 1],
+                [QUERY_LON - 1, QUERY_LAT - 1],
+            ]]},
+            "properties": {"severidade": "Perigo"},
+        }
+        far_away = {
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [[
+                [FAR_LON + 0.5, FAR_LAT + 0.5], [FAR_LON + 0.6, FAR_LAT + 0.5],
+                [FAR_LON + 0.6, FAR_LAT + 0.6], [FAR_LON + 0.5, FAR_LAT + 0.6],
+                [FAR_LON + 0.5, FAR_LAT + 0.5],
+            ]]},
+            "properties": {"severidade": "Perigo"},
+        }
+        db.store_snapshot("inmet", {"type": "FeatureCollection", "features": [big, far_away]})
+        result = risk.summarize(QUERY_LAT, QUERY_LON)
+        item = next(item for item in result["items"] if item["layer"] == "inmet")
+        assert item["count"] == 1
+        assert result["score"] == risk.WEIGHTS["inmet"]
+
     def test_crime_dentro_da_media(self, tmpdb):
         db.store_snapshot("crime", {"type": "FeatureCollection", "features": [
             _crime_cell(ORIGIN, 5),

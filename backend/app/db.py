@@ -11,6 +11,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 from .config import settings
+from .text import normaliza
 
 _NAMED = re.compile(r":([a-zA-Z_][a-zA-Z0-9_]*)")
 
@@ -323,8 +324,6 @@ def finish_trip(trip_id: str) -> None:
 
 
 def _flood_key(name: str, lat: float, lon: float) -> str:
-    from .collectors.geocoding import normaliza
-
     normalized = normaliza(name) if name else ""
     return f"{normalized}|{round(lat, 4):.4f}|{round(lon, 4):.4f}"
 
@@ -378,6 +377,17 @@ def flood_recurrence(days: int = 30) -> list[dict]:
             "episodes": episodes, "last_seen": last["seen_at"],
         })
     return result
+
+
+def purge_trips(hours: int = 24) -> int:
+    """Apaga trajetos expirados há mais de `hours`; a última posição vai junto."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    with connection() as conn:
+        before = conn.execute(
+            "SELECT COUNT(*) AS n FROM trips WHERE expires_at<?", (cutoff,)
+        ).fetchone()["n"]
+        conn.execute("DELETE FROM trips WHERE expires_at<?", (cutoff,))
+    return before
 
 
 def purge_flood_history(days: int = 90) -> int:
