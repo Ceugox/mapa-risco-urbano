@@ -42,14 +42,35 @@ export interface RouteResult {
   geometry: { type: "LineString"; coordinates: [number, number][] };
 }
 
+export type RouteMode = "driving" | "walking";
+
+export interface RouteOptions {
+  mode?: RouteMode;
+  departAt?: string;
+}
+
+export interface RouteResponse {
+  routes: RouteResult[];
+  note: string;
+  mode: RouteMode;
+  depart_hour: number;
+  weights: Record<string, number>;
+}
+
 export async function getRoute(
   origin: { lat: number; lon: number },
   destination: { lat: number; lon: number },
-): Promise<{ routes: RouteResult[]; note: string }> {
+  options?: RouteOptions,
+): Promise<RouteResponse> {
   const response = await fetch(`${base}/api/route`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ origin, destination }),
+    body: JSON.stringify({
+      origin,
+      destination,
+      mode: options?.mode ?? "driving",
+      depart_at: options?.departAt,
+    }),
   });
   if (!response.ok)
     throw new Error((await response.json()).detail || "Não foi possível calcular a rota");

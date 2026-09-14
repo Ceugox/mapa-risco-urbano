@@ -1,6 +1,6 @@
 import { Marker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { useEffect, useRef, useState } from "react";
-import { getRoute, RouteResult, track } from "../api";
+import { getRoute, RouteMode, RouteResult, track } from "../api";
 
 const SP_BOUNDS = { north: -23.3, south: -24.05, east: -46.3, west: -47.0 };
 const LEVEL_COLOR: Record<string, string> = {
@@ -16,6 +16,35 @@ const LEVEL_LABEL: Record<string, string> = {
   reports: "Relatos",
   inmet: "INMET",
 };
+
+// Espelha routing.BASE_TIME_WEIGHTS no backend: pesos sem ajuste de modo ou
+// horário, usados só para calcular o multiplicador exibido nos chips.
+const BASE_TIME_WEIGHTS: Record<string, number> = {
+  crime: 1,
+  alagamento: 3,
+  cemaden: 2,
+  reports: 2,
+  inmet: 5,
+};
+
+type DepartChoice = "now" | "at";
+
+function isNightHour(hour: number) {
+  return hour >= 18 || hour <= 5;
+}
+
+function currentTimeValue() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+}
+
+function departAtFromTime(time: string): string {
+  const [hours, minutes] = time.split(":").map(Number);
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+  if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);
+  return target.toISOString();
+}
 
 type Place = { lat: number; lng: number; label: string };
 type SavedRoute = { name: string; origin: Place; destination: Place; uses: number };
@@ -48,6 +77,11 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
   const [selected, setSelected] = useState(0);
   const [status, setStatus] = useState("");
   const [saved, setSaved] = useState<SavedRoute[]>(loadSaved);
+  const [mode, setMode] = useState<RouteMode>("walking");
+  const [departChoice, setDepartChoice] = useState<DepartChoice>("now");
+  const [departTime, setDepartTime] = useState(currentTimeValue);
+  const [departHour, setDepartHour] = useState<number | null>(null);
+  const [weights, setWeights] = useState<Record<string, number>>({});
   const linesRef = useRef<google.maps.Polyline[]>([]);
   const placesRef = useRef<google.maps.places.PlacesService | null>(null);
 
@@ -167,11 +201,22 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
     setStatus("Calculando rotas…");
     setSuggestions([]);
     try {
-      const result = await getRoute({ lat: from.lat, lon: from.lng }, { lat: to.lat, lon: to.lng });
+      const departAt = departChoice === "at" ? departAtFromTime(departTime) : undefined;
+      const result = await getRoute(
+        { lat: from.lat, lon: from.lng },
+        { lat: to.lat, lon: to.lng },
+        { mode, departAt },
+      );
       setRoutes(result.routes);
       setSelected(0);
       setStatus("");
-      track("route_calculated", { level: result.routes[0]?.level, n: result.routes.length });
+      setDepartHour(result.depart_hour);
+      setWeights(result.weights);
+      track("route_calculated", {
+        level: result.routes[0]?.level,
+        n: result.routes.length,
+        mode,
+      });
       if (maps && map) {
         const bounds = new google.maps.LatLngBounds();
         result.routes[0].geometry.coordinates.forEach(([lng, lat]) => bounds.extend({ lat, lng }));
@@ -181,6 +226,16 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
       setStatus("Não foi possível calcular a rota agora.");
     }
   }
+
+  const skipRecalc = useRef(true);
+  useEffect(() => {
+    if (skipRecalc.current) {
+      skipRecalc.current = false;
+      return;
+    }
+    if (origin && destination) trace();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, departChoice, departTime]);
 
   useEffect(() => {
     if (!map || !maps) return;
@@ -212,6 +267,17 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
     setOriginQ("");
     setDestQ("");
     setSuggestions([]);
+    setWeights({});
+    setDepartHour(null);
+  }
+
+  function weightMultiplier(key: string): string {
+    const base = BASE_TIME_WEIGHTS[key];
+    const current = weights[key];
+    if (!base || !current) return "";
+    const factor = Math.round((current / base) * 100) / 100;
+    if (Math.abs(factor - 1) < 0.001) return "";
+    return ` ×${factor}`;
   }
 
   const route = routes[selected];
@@ -230,6 +296,49 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
       </button>
       {open && (
         <div className="route-body">
+          <div className="route-mode" role="group" aria-label="Modo de transporte">
+            <button
+              type="button"
+              className={`route-mode-option${mode === "walking" ? " active" : ""}`}
+              onClick={() => setMode("walking")}
+              aria-pressed={mode === "walking"}
+            >
+              A pé
+            </button>
+            <button
+              type="button"
+              className={`route-mode-option${mode === "driving" ? " active" : ""}`}
+              onClick={() => setMode("driving")}
+              aria-pressed={mode === "driving"}
+            >
+              De carro
+            </button>
+          </div>
+          <div className="route-depart" role="group" aria-label="Horário de saída">
+            <button
+              type="button"
+              className={`route-depart-option${departChoice === "now" ? " active" : ""}`}
+              onClick={() => setDepartChoice("now")}
+              aria-pressed={departChoice === "now"}
+            >
+              Sair agora
+            </button>
+            <button
+              type="button"
+              className={`route-depart-option${departChoice === "at" ? " active" : ""}`}
+              onClick={() => setDepartChoice("at")}
+              aria-pressed={departChoice === "at"}
+            >
+              às
+            </button>
+            <input
+              type="time"
+              value={departTime}
+              disabled={departChoice !== "at"}
+              onChange={(e) => setDepartTime(e.target.value)}
+              aria-label="Horário de saída"
+            />
+          </div>
           <div className="route-field">
             <input
               value={originQ}
@@ -338,12 +447,18 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
                     .map(([key, value]) => (
                       <span key={key} className="route-chip">
                         {LEVEL_LABEL[key]} +{value}
+                        {weightMultiplier(key)}
                       </span>
                     ))}
                   {Object.values(route.breakdown).every((v) => v === 0) && (
                     <span className="route-chip">sem riscos ativos no trajeto</span>
                   )}
                 </div>
+              )}
+              {departHour !== null && isNightHour(departHour) && (
+                <span className="route-status route-night-note">
+                  Pesos noturnos aplicados (peso do crime aumentado para o horário de saída)
+                </span>
               )}
             </div>
           )}
