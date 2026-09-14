@@ -116,14 +116,22 @@ npm run dev                           # http://localhost:5173
 `build_crime_layer.py` baixa ~111 MB da SSP-SP; só rode quando quiser
 atualizar a camada criminal (publicação mensal).
 
-## Verificar (obrigatório após qualquer alteração)
+## Verificação
+
+Obrigatória após qualquer alteração. Cada linha é um comando único, rodado da
+raiz do repo, sem `cd` nem `&&`: o portão de evidência do harness só aceita
+assim, e o CI roda exatamente estes passos.
 
 ```bash
 ruff check backend
 pytest backend/tests
-cd frontend && npx tsc --noEmit && npm run build
-cd frontend && npx prettier --write src
+npm --prefix frontend run build
+npm --prefix frontend run lint
 ```
+
+`ruff` e `pytest` precisam estar no PATH (`pip install --user ruff pytest`) ou
+o venv de `backend/` ativado. `build` faz `tsc --noEmit` + `vite build`; `lint`
+é `prettier --check`; para formatar, `npm --prefix frontend run format`.
 
 Depois, abra `http://localhost:5173` e confira: mapa carrega com trânsito,
 painel de camadas responde, banner "N fonte(s) indisponível(is)" aparece no
