@@ -3,6 +3,7 @@ import { getLayer, getLayers, lastLayersFromCache, track } from "./api";
 import { labels } from "./components/LayerPanel";
 import { MapView } from "./components/Map";
 import { EmergencyPanel } from "./components/EmergencyPanel";
+import { HerePanel } from "./components/HerePanel";
 import { ReportForm } from "./components/ReportForm";
 import { SupportPanel } from "./components/SupportPanel";
 import { Feature, FeatureCollection, LayerName, LayerStatus } from "./types";
@@ -174,6 +175,7 @@ export default function App() {
           </a>
           <div className="nav-links">
             <a href="#mapa">O mapa</a>
+            <a href="#agora">Agora</a>
             <a href="#emergencia">Emergência</a>
             <a href="#apoio">Apoio</a>
             <a href="#como-funciona">Como funciona</a>
@@ -270,6 +272,8 @@ export default function App() {
             })}
           </div>
         </section>
+
+        <HerePanel />
 
         <EmergencyPanel />
 

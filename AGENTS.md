@@ -37,6 +37,8 @@ backend/
   app/routers/reports.py   POST /api/reports, GET /api/reports, POST /api/reports/{id}/confirm
   app/routers/ingest.py    POST /api/ingest/message (texto livre -> relato)
   app/routers/whatsapp.py  webhook Cloud API (GET verifica, POST recebe)
+  app/routers/risk.py      GET /api/risk/here (resumo de risco perto de um ponto)
+  app/risk.py              summarize(lat, lon, radius_m=800): resumo por camada via H3 r8
   app/routers/admin.py     login de admin, GET /api/admin/stats, POST /api/events
   app/routers/trips.py     trajeto acompanhado ao vivo: POST /api/trips, POST /api/trips/{id}/position,
                            POST /api/trips/{id}/finish, GET /api/trips/shared/{share_token}
@@ -59,6 +61,9 @@ frontend/
   src/components/LayerPanel.tsx   painel de camadas (switches, idade, contagem, status)
   src/components/RoutePanel.tsx   traça rota e compartilha trajeto ao vivo (link /t/<token>)
   src/components/ReportForm.tsx   modal de relato
+  src/components/HerePanel.tsx    "Risco aqui e agora": posição atual + Casa/Trabalho salvos
+  src/places.ts            searchPlaces(q): busca de endereço (Google Places -> Nominatim),
+                           usada por RoutePanel e HerePanel
   src/api.ts, src/types.ts
   src/styles.css           tokens do design system e todo o CSS
   public/manifest.webmanifest   nome, ícones, display standalone (PWA)
@@ -188,6 +193,8 @@ POST /api/route                {origin, destination, mode, depart_at} -> rotas c
 POST /api/ingest/message       {text, channel} -> classifica, geocodifica, cria/corrobora
 GET  /api/webhooks/whatsapp    verificação Meta (hub.mode/hub.verify_token/hub.challenge)
 POST /api/webhooks/whatsapp    Cloud API: texto -> pipeline; location -> riscos próximos
+GET  /api/risk/here?lat&lon    resumo de risco num raio de ~800 m (H3 r8), usado por
+                               /api/webhooks/whatsapp e pelo painel "Risco aqui e agora"
 POST /api/admin/login          {password} -> {token}; exige ADMIN_PASSWORD no ambiente (403 sem ela)
 GET  /api/admin/stats?range=   24h|7d|30d; Bearer token de admin; KPIs, série, rankings, erros
 POST /api/events               {name, meta} -> 204; evento do frontend (page_view, route_calculated...)

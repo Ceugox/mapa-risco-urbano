@@ -25,6 +25,7 @@ from .routers.auth import router as auth_router
 from .routers.ingest import router as ingest_router
 from .routers.layers import router as layers_router
 from .routers.reports import router as reports_router
+from .routers.risk import router as risk_router
 from .routers.route import router as route_router
 from .routers.support import router as support_router
 from .routers.trips import router as trips_router
@@ -91,6 +92,7 @@ app.include_router(layers_router)
 app.include_router(reports_router)
 app.include_router(ingest_router)
 app.include_router(whatsapp_router)
+app.include_router(risk_router)
 app.include_router(route_router)
 app.include_router(support_router)
 app.include_router(trips_router)
