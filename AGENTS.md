@@ -49,12 +49,29 @@ frontend/
   src/components/ReportForm.tsx   modal de relato
   src/api.ts, src/types.ts
   src/styles.css           tokens do design system e todo o CSS
+  public/manifest.webmanifest   nome, ícones, display standalone (PWA)
+  public/sw.js             service worker fonte (placeholder __BUILD__, ver vite.config.ts)
+  public/icons/, public/apple-touch-icon.png   gerados por scripts/make_icons.py
+  scripts/make_icons.py    gera os PNGs do PWA (stdlib-only: zlib + struct, sem Pillow)
   .env.example             VITE_GOOGLE_MAPS_API_KEY, VITE_API_URL
 ```
 
 Camadas (`LayerName`): `alagamento` (CGE-SP), `cemaden`, `inmet`, `clima`
 (Open-Meteo), `crime` (SSP-SP agregado), `reports` (comunidade). Trânsito vem
 do `google.maps.TrafficLayer`, não do backend.
+
+## PWA (service worker e caches)
+
+O plugin `closeBundle` em `vite.config.ts` copia `public/sw.js` para
+`dist/sw.js` trocando `__BUILD__` pelo timestamp do build, então o service
+worker muda de versão a cada deploy. Estratégias: navegação
+(`network-first` com fallback ao `index.html` em cache), `/assets/*`
+(`cache-first`, hash já versiona), `GET /api/layers` e `/api/layers/*`
+(`stale-while-revalidate` no cache `mapasp-api`, respondendo do cache e
+marcando `X-From-Cache: 1` quando a rede falha). `/api/admin`, `/api/events`,
+`/api/auth`, `/api/contacts` e qualquer POST nunca são interceptados. O
+`activate` limpa caches versionados antigos (`mapasp-shell-*`,
+`mapasp-assets-*`). O SW só é registrado em produção (`main.tsx`).
 
 ## Rodar
 

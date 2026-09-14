@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getLayer, getLayers, track } from "./api";
+import { getLayer, getLayers, lastLayersFromCache, track } from "./api";
 import { labels } from "./components/LayerPanel";
 import { MapView } from "./components/Map";
 import { EmergencyPanel } from "./components/EmergencyPanel";
@@ -55,6 +55,11 @@ function focusMap() {
   window.setTimeout(() => section?.querySelector<HTMLElement>(".map-wrap")?.focus(), 250);
 }
 
+type InstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+};
+
 export default function App() {
   const [statuses, setStatuses] = useState<LayerStatus[]>([]);
   const [data, setData] = useState<Partial<Record<LayerName, FeatureCollection>>>({});
@@ -63,10 +68,16 @@ export default function App() {
   const [reportPoint, setReportPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [reports, setReports] = useState<Feature[]>([]);
   const [toast, setToast] = useState("");
+  const [isOnline, setIsOnline] = useState(
+    () => typeof navigator === "undefined" || navigator.onLine,
+  );
+  const [fromCache, setFromCache] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
 
   async function refresh() {
     try {
       const status = await getLayers();
+      setFromCache(lastLayersFromCache);
       setStatuses(status);
       const loaded = await Promise.all(
         layers
@@ -105,6 +116,33 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => {
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as InstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const installApp = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
+  };
+
   const activeSources = statuses.filter((status) => status.ok).length;
   const unavailableCount = statuses.filter((status) => !status.ok).length;
   const metrics = useMemo(() => {
@@ -114,6 +152,7 @@ export default function App() {
       statuses,
     )}`;
   }, [statuses]);
+  const showOfflineBanner = !isOnline || fromCache;
 
   return (
     <>
@@ -142,9 +181,20 @@ export default function App() {
             <button className="button ghost nav-report" onClick={activateReport}>
               Reportar
             </button>
+            {installPrompt && (
+              <button className="button ghost nav-install" onClick={installApp}>
+                Instalar app
+              </button>
+            )}
           </div>
         </nav>
       </header>
+
+      {showOfflineBanner && (
+        <div className="offline-banner" role="status" aria-live="polite">
+          Sem conexão, mostrando dados de {latestTime(statuses)}
+        </div>
+      )}
 
       <main id="inicio">
         <section className="hero container">
