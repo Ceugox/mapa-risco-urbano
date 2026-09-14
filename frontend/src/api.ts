@@ -1,8 +1,15 @@
 import { Feature, FeatureCollection, LayerName, LayerStatus } from "./types";
 
 const base = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+
+// Atualizada a cada getLayers(): true quando o service worker respondeu com
+// o snapshot em cache (header X-From-Cache), sinalizando dados offline.
+export let lastLayersFromCache = false;
+
 export async function getLayers(): Promise<LayerStatus[]> {
-  return (await fetch(`${base}/api/layers`)).json();
+  const response = await fetch(`${base}/api/layers`);
+  lastLayersFromCache = response.headers.get("X-From-Cache") === "1";
+  return response.json();
 }
 export async function getLayer(layer: LayerName): Promise<FeatureCollection> {
   return (await fetch(`${base}/api/layers/${layer}`)).json();

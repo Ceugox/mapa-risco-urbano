@@ -1662,3 +1662,19 @@ h1 span {
     text-align: center;
   }
 }
+
+/* PWA: banner offline e botão de instalação. */
+.offline-banner {
+  border-bottom: 1px solid var(--line-1);
+  background: var(--bg-2);
+  color: var(--warn);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-align: center;
+  padding: 8px 16px;
+}
+
+.nav-install {
+  border: 1px solid var(--line-2);
+}
