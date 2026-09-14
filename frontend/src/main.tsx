@@ -11,3 +11,11 @@ const isAdmin = window.location.pathname.replace(/\/$/, "") === "/admin";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>{isAdmin ? <AdminApp /> : <App />}</React.StrictMode>,
 );
+
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      // Falha ao registrar o service worker não deve quebrar o site.
+    });
+  });
+}
