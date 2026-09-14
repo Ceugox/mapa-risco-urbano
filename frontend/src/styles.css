@@ -1678,3 +1678,32 @@ h1 span {
 .nav-install {
   border: 1px solid var(--line-2);
 }
+
+.trip-share {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--line-1);
+  padding-top: 8px;
+}
+
+.trip-share-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trip-share-link code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 8px 10px;
+  border: 1px solid var(--line-1);
+  border-radius: 8px;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}

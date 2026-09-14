@@ -5,11 +5,22 @@ import "@fontsource-variable/inter";
 import "@fontsource-variable/jetbrains-mono";
 import App from "./App";
 import { AdminApp } from "./admin/AdminApp";
+import { TripPage } from "./trip/TripPage";
 
-const isAdmin = window.location.pathname.replace(/\/$/, "") === "/admin";
+const path = window.location.pathname.replace(/\/$/, "");
+const isAdmin = path === "/admin";
+const tripMatch = path.match(/^\/t\/([^/]+)$/);
+
+function Root() {
+  if (isAdmin) return <AdminApp />;
+  if (tripMatch) return <TripPage token={tripMatch[1]} />;
+  return <App />;
+}
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>{isAdmin ? <AdminApp /> : <App />}</React.StrictMode>,
+  <React.StrictMode>
+    <Root />
+  </React.StrictMode>,
 );
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {

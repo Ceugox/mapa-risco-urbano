@@ -1,6 +1,6 @@
 import { Marker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { useEffect, useRef, useState } from "react";
-import { getRoute, RouteResult, track } from "../api";
+import { createTrip, finishTrip, getRoute, RouteResult, sendTripPosition, track } from "../api";
 
 const SP_BOUNDS = { north: -23.3, south: -24.05, east: -46.3, west: -47.0 };
 const LEVEL_COLOR: Record<string, string> = {
@@ -34,6 +34,24 @@ function shortLabel(label: string) {
   return label.split(",")[0].split("—")[0].trim();
 }
 
+type ActiveTrip = { id: string; update_token: string; share_token: string };
+const TRIP_KEY = "mapasp_active_trip";
+const CONTACTS_KEY = "riscosp-contatos";
+const TRIP_POSITION_INTERVAL_MS = 20000;
+
+function loadActiveTrip(): ActiveTrip | null {
+  try {
+    const raw = localStorage.getItem(TRIP_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function shareLink(trip: ActiveTrip) {
+  return `${window.location.origin}/t/${trip.share_token}`;
+}
+
 export function RoutePanel({ reportMode }: { reportMode: boolean }) {
   const map = useMap();
   const maps = useMapsLibrary("maps");
@@ -48,8 +66,118 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
   const [selected, setSelected] = useState(0);
   const [status, setStatus] = useState("");
   const [saved, setSaved] = useState<SavedRoute[]>(loadSaved);
+  const [activeTrip, setActiveTrip] = useState<ActiveTrip | null>(loadActiveTrip);
+  const [tripStatus, setTripStatus] = useState("");
   const linesRef = useRef<google.maps.Polyline[]>([]);
   const placesRef = useRef<google.maps.places.PlacesService | null>(null);
+  const watchIdRef = useRef<number | null>(null);
+  const lastSentRef = useRef(0);
+
+  function stopWatch() {
+    if (watchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+  }
+
+  function startWatch(trip: ActiveTrip) {
+    if (!navigator.geolocation) return;
+    stopWatch();
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const now = Date.now();
+        if (now - lastSentRef.current < TRIP_POSITION_INTERVAL_MS) return;
+        lastSentRef.current = now;
+        sendTripPosition(
+          trip.id,
+          pos.coords.latitude,
+          pos.coords.longitude,
+          trip.update_token,
+        ).catch(() => {});
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 10000 },
+    );
+  }
+
+  useEffect(() => {
+    if (activeTrip) startWatch(activeTrip);
+    return () => stopWatch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function shareTrip() {
+    if (!destination) return;
+    setTripStatus("Compartilhando…");
+    try {
+      const created = await createTrip(
+        {
+          lat: destination.lat,
+          lon: destination.lng,
+          label: shortLabel(destination.label || destQ),
+        },
+        route?.duration_min,
+      );
+      const trip: ActiveTrip = {
+        id: created.id,
+        update_token: created.update_token,
+        share_token: created.share_token,
+      };
+      localStorage.setItem(TRIP_KEY, JSON.stringify(trip));
+      setActiveTrip(trip);
+      startWatch(trip);
+      track("trip_shared");
+      setTripStatus("");
+    } catch {
+      setTripStatus("Não foi possível compartilhar o trajeto.");
+    }
+  }
+
+  async function copyTripLink() {
+    if (!activeTrip) return;
+    try {
+      await navigator.clipboard.writeText(shareLink(activeTrip));
+      setTripStatus("Link copiado.");
+    } catch {
+      setTripStatus("Não foi possível copiar — copie manualmente.");
+    }
+  }
+
+  function shareTripOnWhatsapp() {
+    if (!activeTrip) return;
+    const text = encodeURIComponent(
+      `Estou a caminho, acompanhe meu trajeto: ${shareLink(activeTrip)}`,
+    );
+    let contacts: { phone: string }[] = [];
+    try {
+      contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || "[]");
+    } catch {
+      contacts = [];
+    }
+    if (contacts.length) {
+      contacts.forEach((contact, index) =>
+        window.setTimeout(
+          () => window.open(`https://wa.me/${contact.phone}?text=${text}`, "_blank"),
+          index * 300,
+        ),
+      );
+    } else {
+      window.open(`https://wa.me/?text=${text}`, "_blank");
+    }
+  }
+
+  async function arrivedTrip() {
+    if (!activeTrip) return;
+    stopWatch();
+    try {
+      await finishTrip(activeTrip.id, activeTrip.update_token);
+    } catch {
+      // Encerra localmente mesmo se a chamada falhar.
+    }
+    localStorage.removeItem(TRIP_KEY);
+    setActiveTrip(null);
+    setTripStatus("Chegada registrada.");
+  }
 
   async function searchPlaces(q: string): Promise<Place[]> {
     const query = q.toLowerCase().includes("paulo") ? q : `${q}, São Paulo`;
@@ -345,6 +473,31 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
                   )}
                 </div>
               )}
+              <div className="trip-share">
+                {!activeTrip ? (
+                  <button className="button secondary" onClick={shareTrip} type="button">
+                    Compartilhar trajeto
+                  </button>
+                ) : (
+                  <>
+                    <div className="trip-share-link">
+                      <code>{shareLink(activeTrip)}</code>
+                      <button className="button ghost" onClick={copyTripLink} type="button">
+                        Copiar
+                      </button>
+                    </div>
+                    <div className="route-actions">
+                      <button className="button ghost" onClick={shareTripOnWhatsapp} type="button">
+                        Enviar no WhatsApp
+                      </button>
+                      <button className="button primary" onClick={arrivedTrip} type="button">
+                        Cheguei
+                      </button>
+                    </div>
+                  </>
+                )}
+                {tripStatus && <span className="route-status">{tripStatus}</span>}
+              </div>
             </div>
           )}
         </div>

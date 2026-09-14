@@ -178,3 +178,67 @@ export async function adminStats(token: string, range: string): Promise<AdminSta
   if (!response.ok) throw new Error("Falha ao carregar estatísticas");
   return response.json();
 }
+
+export interface TripDestination {
+  lat: number;
+  lon: number;
+  label?: string | null;
+}
+
+export interface TripCreated {
+  id: string;
+  share_token: string;
+  update_token: string;
+  expires_at: string;
+}
+
+export interface SharedTrip {
+  destination: TripDestination;
+  last_position: { lat: number; lon: number; at: string } | null;
+  finished_at: string | null;
+  expires_at: string;
+  active: boolean;
+}
+
+export async function createTrip(
+  destination: TripDestination,
+  duration_min?: number,
+): Promise<TripCreated> {
+  const response = await fetch(`${base}/api/trips`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ destination, duration_min }),
+  });
+  if (!response.ok)
+    throw new Error((await response.json()).detail || "Não foi possível compartilhar o trajeto");
+  return response.json();
+}
+
+export async function sendTripPosition(
+  tripId: string,
+  lat: number,
+  lon: number,
+  updateToken: string,
+): Promise<void> {
+  const response = await fetch(`${base}/api/trips/${tripId}/position`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lat, lon, update_token: updateToken }),
+  });
+  if (!response.ok) throw new Error("Não foi possível enviar a posição");
+}
+
+export async function finishTrip(tripId: string, updateToken: string): Promise<void> {
+  const response = await fetch(`${base}/api/trips/${tripId}/finish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ update_token: updateToken }),
+  });
+  if (!response.ok) throw new Error("Não foi possível encerrar o trajeto");
+}
+
+export async function getSharedTrip(shareToken: string): Promise<SharedTrip> {
+  const response = await fetch(`${base}/api/trips/shared/${shareToken}`);
+  if (!response.ok) throw new Error("Trajeto não encontrado");
+  return response.json();
+}

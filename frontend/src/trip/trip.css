@@ -1,0 +1,93 @@
+.trip-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 20px 40px;
+  background: var(--bg-0);
+  color: var(--fg-0);
+}
+
+.trip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trip-brand {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--fg-1);
+  text-transform: uppercase;
+}
+
+.trip-status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+}
+
+.trip-status-live {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.trip-status-done {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.trip-status-expired {
+  color: var(--fg-2);
+}
+
+.trip-loading,
+.trip-empty {
+  color: var(--fg-2);
+  font-size: 14px;
+}
+
+.trip-summary {
+  color: var(--fg-1);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.trip-map-wrap {
+  flex: 1;
+  min-height: 360px;
+  border: 1px solid var(--line-1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.trip-fallback {
+  border: 1px solid var(--line-1);
+  border-radius: 12px;
+  background: var(--bg-1);
+  padding: 16px;
+  color: var(--fg-1);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trip-fallback a {
+  color: var(--accent);
+}
+
+.trip-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  color: var(--fg-3);
+}

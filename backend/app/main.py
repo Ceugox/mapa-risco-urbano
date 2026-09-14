@@ -27,6 +27,7 @@ from .routers.layers import router as layers_router
 from .routers.reports import router as reports_router
 from .routers.route import router as route_router
 from .routers.support import router as support_router
+from .routers.trips import router as trips_router
 from .routers.whatsapp import router as whatsapp_router
 
 
@@ -91,6 +92,7 @@ app.include_router(ingest_router)
 app.include_router(whatsapp_router)
 app.include_router(route_router)
 app.include_router(support_router)
+app.include_router(trips_router)
 
 
 @app.get("/health")
@@ -103,6 +105,10 @@ if DIST.exists():
 
     @app.get("/admin", include_in_schema=False)
     def admin_page():
+        return FileResponse(DIST / "index.html")
+
+    @app.get("/t/{token}", include_in_schema=False)
+    def trip_page(token: str):
         return FileResponse(DIST / "index.html")
 
     app.mount("/", StaticFiles(directory=DIST, html=True), name="site")

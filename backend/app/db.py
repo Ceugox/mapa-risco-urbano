@@ -88,6 +88,14 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS sessions (
                 token TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS trips (
+                id TEXT PRIMARY KEY, share_token TEXT UNIQUE NOT NULL,
+                update_token TEXT UNIQUE NOT NULL,
+                destination_lat REAL NOT NULL, destination_lon REAL NOT NULL,
+                destination_label TEXT,
+                last_lat REAL, last_lon REAL, last_at TEXT,
+                created_at TEXT NOT NULL, expires_at TEXT NOT NULL, finished_at TEXT
+            );
             CREATE TABLE IF NOT EXISTS access_log (
                 ts TEXT NOT NULL, method TEXT NOT NULL, path TEXT NOT NULL,
                 status INTEGER NOT NULL, duration_ms REAL NOT NULL, visitor TEXT NOT NULL,
@@ -266,4 +274,43 @@ def save_user_contacts(user_id: str, contacts_json: str) -> None:
     with connection() as conn:
         conn.execute(
             "UPDATE users SET contacts_json=? WHERE id=?", (contacts_json, user_id)
+        )
+
+
+def create_trip(data: dict) -> None:
+    with connection() as conn:
+        conn.execute(
+            """INSERT INTO trips
+            (id,share_token,update_token,destination_lat,destination_lon,destination_label,
+             created_at,expires_at)
+            VALUES(:id,:share_token,:update_token,:destination_lat,:destination_lon,
+             :destination_label,:created_at,:expires_at)""",
+            data,
+        )
+
+
+def get_trip(trip_id: str):
+    with connection() as conn:
+        return conn.execute("SELECT * FROM trips WHERE id=?", (trip_id,)).fetchone()
+
+
+def get_trip_by_share_token(share_token: str):
+    with connection() as conn:
+        return conn.execute(
+            "SELECT * FROM trips WHERE share_token=?", (share_token,)
+        ).fetchone()
+
+
+def update_trip_position(trip_id: str, lat: float, lon: float, at: str) -> None:
+    with connection() as conn:
+        conn.execute(
+            "UPDATE trips SET last_lat=?,last_lon=?,last_at=? WHERE id=?",
+            (lat, lon, at, trip_id),
+        )
+
+
+def finish_trip(trip_id: str) -> None:
+    with connection() as conn:
+        conn.execute(
+            "UPDATE trips SET finished_at=? WHERE id=?", (now_iso(), trip_id)
         )
