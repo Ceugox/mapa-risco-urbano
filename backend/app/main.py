@@ -1,7 +1,10 @@
 import asyncio
 import json
+import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
