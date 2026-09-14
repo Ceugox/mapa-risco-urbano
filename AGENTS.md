@@ -27,9 +27,13 @@ backend/
   app/main.py              FastAPI, CORS, scheduler dos coletores, /health
   app/config.py            Settings (pydantic-settings; lê backend/.env)
   app/db.py                SQLite local; se DATABASE_URL=postgres(ql)://... estiver
-                           setada, usa Postgres (psycopg) — mesmas queries
+                           setada, usa Postgres (psycopg) — mesmas queries; inclui
+                           flood_history (histórico de alagamentos, dedupe 30 min,
+                           episódios agrupados por gap > 2 h, retenção 90 dias)
   app/collectors/          cge.py, cemaden.py, inmet.py, meteo.py, geocoding.py, base.py
-  app/routers/layers.py    GET /api/layers, GET /api/layers/{layer}  (GeoJSON)
+                           (base.py grava flood_history a cada coleta ok de alagamento)
+  app/routers/layers.py    GET /api/layers, GET /api/layers/{layer}  (GeoJSON);
+                           alagamento_hist é calculada de flood_recurrence(30), sem snapshot
   app/routers/reports.py   POST /api/reports, GET /api/reports, POST /api/reports/{id}/confirm
   app/routers/ingest.py    POST /api/ingest/message (texto livre -> relato)
   app/routers/whatsapp.py  webhook Cloud API (GET verifica, POST recebe)
@@ -40,6 +44,7 @@ backend/
   scripts/build_crime_layer.py   job offline: SSP-SP XLSX -> data/crime_h3.json
   data/crime_h3.json       camada criminal agregada (H3 r8, versionada, ~730 KB)
   tests/test_parsers.py
+  tests/test_flood_history.py   dedupe, contagem de episódios, GeoJSON, retenção
 frontend/
   src/main.tsx             escolhe App (site) ou AdminApp quando o path é /admin
   src/App.tsx              nav, hero, mapa, ticker, "Como funciona", "Fontes e método", footer
@@ -52,9 +57,10 @@ frontend/
   .env.example             VITE_GOOGLE_MAPS_API_KEY, VITE_API_URL
 ```
 
-Camadas (`LayerName`): `alagamento` (CGE-SP), `cemaden`, `inmet`, `clima`
-(Open-Meteo), `crime` (SSP-SP agregado), `reports` (comunidade). Trânsito vem
-do `google.maps.TrafficLayer`, não do backend.
+Camadas (`LayerName`): `alagamento` (CGE-SP), `alagamento_hist` (recorrência de
+alagamentos nos últimos 30 dias, CGE-SP histórico, começa **desligada** na UI),
+`cemaden`, `inmet`, `clima` (Open-Meteo), `crime` (SSP-SP agregado), `reports`
+(comunidade). Trânsito vem do `google.maps.TrafficLayer`, não do backend.
 
 ## Rodar
 
@@ -133,6 +139,12 @@ no mapa -> modal -> toast), Esc cancela o modo.
   lê as linhas do período em Python — reavaliar se passar de ~200 mil linhas/mês.
 - Pendências de UX: revisar viewport mobile, navegação por teclado, contraste
   sistemático e painel de camadas com labels longos.
+- `alagamento_hist`: cada coleta ok de `alagamento` grava uma linha por ponto
+  em `flood_history` (chave = nome normalizado + lat/lon arredondados a 4
+  casas), sem duplicar se já houver linha do mesmo ponto nos últimos 30 min.
+  `episodes` agrupa ocorrências separadas por mais de 2 h. Retenção de 90 dias
+  via job do scheduler (`flood_history_purge`, a cada 6 h). O histórico ainda
+  não entra no score de rota (`routing.py`).
 
 ## Endpoints úteis
 
@@ -140,6 +152,7 @@ no mapa -> modal -> toast), Esc cancela o modo.
 GET  /health
 GET  /api/layers                 status de todas as camadas (idade, ok, contagem)
 GET  /api/layers/{layer}         GeoJSON FeatureCollection
+GET  /api/layers/alagamento_hist GeoJSON com {name, episodes, last_seen, days} por ponto
 POST /api/reports                {lat, lng, category, description}
 GET  /api/reports
 POST /api/reports/{id}/confirm
