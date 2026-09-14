@@ -2,10 +2,14 @@
 #
 # `scripts.setup` roda quando o Orca cria um worktree com `--setup run`, que é
 # como os agentes do piloto de orquestração recebem um checkout pronto. O mesmo
-# script serve para um clone manual: `bash scripts/setup.sh`.
+# script serve para um clone manual: `node scripts/setup.mjs`.
+#
+# Node e não shell: no Windows o runner do Orca chama o comando por cmd.exe,
+# onde `bash` resolve para o bash do WSL. Sem distro instalada isso falha com
+# `execvpe(/bin/bash) failed` e o worktree nasce vazio sem avisar.
 #
 # Por que isto existe: worktree sem node_modules convida a junction (mklink /J)
 # apontando para o checkout principal, e `git worktree remove --force` segue a
 # junction e apaga o node_modules de verdade. Aconteceu em 14/09/2026.
 scripts:
-  setup: bash scripts/setup.sh
+  setup: node scripts/setup.mjs

@@ -97,7 +97,7 @@ marcando `X-From-Cache: 1` quando a rede falha). `/api/admin`, `/api/events`,
 ## Preparar um checkout novo
 
 ```bash
-bash scripts/setup.sh
+node scripts/setup.mjs
 ```
 
 Cria `backend/.venv` com os requirements e instala `frontend/node_modules` pelo
