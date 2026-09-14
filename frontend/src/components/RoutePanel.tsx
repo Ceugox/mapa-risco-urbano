@@ -1,8 +1,8 @@
 import { Marker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { useEffect, useRef, useState } from "react";
 import { getRoute, RouteResult, track } from "../api";
+import { Place, searchPlaces } from "../places";
 
-const SP_BOUNDS = { north: -23.3, south: -24.05, east: -46.3, west: -47.0 };
 const LEVEL_COLOR: Record<string, string> = {
   baixo: "#22c55e",
   moderado: "#eab308",
@@ -17,7 +17,6 @@ const LEVEL_LABEL: Record<string, string> = {
   inmet: "INMET",
 };
 
-type Place = { lat: number; lng: number; label: string };
 type SavedRoute = { name: string; origin: Place; destination: Place; uses: number };
 
 const SAVED_KEY = "mapasp_saved_routes";
@@ -49,50 +48,6 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
   const [status, setStatus] = useState("");
   const [saved, setSaved] = useState<SavedRoute[]>(loadSaved);
   const linesRef = useRef<google.maps.Polyline[]>([]);
-  const placesRef = useRef<google.maps.places.PlacesService | null>(null);
-
-  async function searchPlaces(q: string): Promise<Place[]> {
-    const query = q.toLowerCase().includes("paulo") ? q : `${q}, São Paulo`;
-    try {
-      if (map) {
-        const lib = (await google.maps.importLibrary("places")) as google.maps.PlacesLibrary;
-        placesRef.current ??= new lib.PlacesService(map);
-        const found = await new Promise<google.maps.places.PlaceResult[]>((resolve) => {
-          placesRef.current?.textSearch({ query, bounds: SP_BOUNDS }, (results, code) =>
-            resolve(code === google.maps.places.PlacesServiceStatus.OK && results ? results : []),
-          );
-        });
-        const out = found.slice(0, 4).flatMap((result) => {
-          const loc = result.geometry?.location;
-          return loc
-            ? [
-                {
-                  lat: loc.lat(),
-                  lng: loc.lng(),
-                  label: `${result.name} — ${result.formatted_address}`,
-                },
-              ]
-            : [];
-        });
-        if (out.length) return out;
-      }
-    } catch {
-      // Places indisponível na chave; cai no Nominatim.
-    }
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=4&countrycodes=br&q=${encodeURIComponent(query)}`,
-      );
-      const arr: { lat: string; lon: string; display_name: string }[] = await res.json();
-      return arr.map((item) => ({
-        lat: parseFloat(item.lat),
-        lng: parseFloat(item.lon),
-        label: item.display_name,
-      }));
-    } catch {
-      return [];
-    }
-  }
 
   async function suggest(which: "origin" | "dest", q: string) {
     if (q.trim().length < 3) return;

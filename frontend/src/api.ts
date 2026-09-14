@@ -171,3 +171,24 @@ export async function adminStats(token: string, range: string): Promise<AdminSta
   if (!response.ok) throw new Error("Falha ao carregar estatísticas");
   return response.json();
 }
+
+export interface RiskItem {
+  layer: string;
+  count: number;
+  label: string;
+  nearest_m: number | null;
+}
+
+export interface RiskHereResult {
+  level: "baixo" | "moderado" | "alto";
+  score: number;
+  items: RiskItem[];
+  updated_at: string;
+}
+
+export async function getRiskHere(lat: number, lon: number): Promise<RiskHereResult> {
+  const response = await fetch(`${base}/api/risk/here?lat=${lat}&lon=${lon}`);
+  if (!response.ok)
+    throw new Error((await response.json()).detail || "Não foi possível avaliar o risco aqui");
+  return response.json();
+}

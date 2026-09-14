@@ -1662,3 +1662,139 @@ h1 span {
     text-align: center;
   }
 }
+
+.here-actions {
+  display: flex;
+  margin-top: 20px;
+}
+
+.here-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.here-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line-1);
+  border-radius: 10px;
+  background: var(--bg-2);
+}
+
+.here-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.here-card-head strong {
+  color: var(--fg-0);
+  font-size: 15px;
+}
+
+.here-level {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.here-changed {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.here-search {
+  position: relative;
+}
+
+.here-search input {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--line-1);
+  border-radius: 8px;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-size: 13px;
+}
+
+.here-search input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+.here-suggestions {
+  position: absolute;
+  z-index: 4;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--line-1);
+  border-radius: 8px;
+  background: var(--bg-1);
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.here-suggestions button {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.here-suggestions button:hover {
+  background: var(--bg-2);
+  color: var(--fg-1);
+}
+
+.here-status {
+  color: var(--fg-2);
+  font-size: 11px;
+}
+
+.here-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--fg-1);
+  font-size: 13px;
+}
+
+.here-item-empty {
+  color: var(--fg-2);
+}
+
+.here-updated {
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+@media (max-width: 767px) {
+  .here-grid {
+    grid-template-columns: 1fr;
+  }
+}
