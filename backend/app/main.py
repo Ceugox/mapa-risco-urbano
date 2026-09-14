@@ -66,13 +66,21 @@ async def lifespan(app: FastAPI):
     store_snapshot("crime", _crime_payload())
     store_snapshot("reports", _reports_payload())
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(lambda: asyncio.create_task(asyncio.to_thread(run_collector, "alagamento", collect_cge)), "interval", seconds=settings.cge_interval, id="cge", max_instances=1)
-    scheduler.add_job(lambda: asyncio.create_task(asyncio.to_thread(run_collector, "cemaden", collect_cemaden)), "interval", seconds=settings.cemaden_interval, id="cemaden", max_instances=1)
-    scheduler.add_job(lambda: asyncio.create_task(asyncio.to_thread(run_collector, "inmet", collect_inmet)), "interval", seconds=settings.inmet_interval, id="inmet", max_instances=1)
-    scheduler.add_job(lambda: asyncio.create_task(asyncio.to_thread(run_collector, "clima", collect_meteo)), "interval", seconds=settings.meteo_interval, id="meteo", max_instances=1)
-    scheduler.add_job(lambda: asyncio.create_task(asyncio.to_thread(analytics.flush)), "interval", seconds=15, id="analytics_flush", max_instances=1)
-    scheduler.add_job(lambda: asyncio.create_task(asyncio.to_thread(analytics.purge, settings.analytics_retention_days)), "interval", hours=6, id="analytics_purge", max_instances=1)
-    scheduler.add_job(lambda: asyncio.create_task(asyncio.to_thread(purge_flood_history, 90)), "interval", hours=6, id="flood_history_purge", max_instances=1)
+    # AsyncIOScheduler executa funções síncronas num thread pool, onde não há event
+    # loop; por isso cada job é uma corrotina que despacha o trabalho bloqueante.
+    async def collector_job(layer: str, collect) -> None:
+        await asyncio.to_thread(run_collector, layer, collect)
+
+    async def maintenance_job(func, *args) -> None:
+        await asyncio.to_thread(func, *args)
+
+    scheduler.add_job(collector_job, "interval", args=["alagamento", collect_cge], seconds=settings.cge_interval, id="cge", max_instances=1)
+    scheduler.add_job(collector_job, "interval", args=["cemaden", collect_cemaden], seconds=settings.cemaden_interval, id="cemaden", max_instances=1)
+    scheduler.add_job(collector_job, "interval", args=["inmet", collect_inmet], seconds=settings.inmet_interval, id="inmet", max_instances=1)
+    scheduler.add_job(collector_job, "interval", args=["clima", collect_meteo], seconds=settings.meteo_interval, id="meteo", max_instances=1)
+    scheduler.add_job(maintenance_job, "interval", args=[analytics.flush], seconds=15, id="analytics_flush", max_instances=1)
+    scheduler.add_job(maintenance_job, "interval", args=[analytics.purge, settings.analytics_retention_days], hours=6, id="analytics_purge", max_instances=1)
+    scheduler.add_job(maintenance_job, "interval", args=[purge_flood_history, 90], hours=6, id="flood_history_purge", max_instances=1)
     scheduler.start()
     asyncio.create_task(collect_all())
     yield
