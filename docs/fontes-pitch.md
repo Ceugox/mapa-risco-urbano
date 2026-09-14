@@ -108,7 +108,7 @@ Divulgação:
 
 Endpoint público com contagem ao vivo por fonte (idade e status de cada
 coletor): `GET /api/layers` em
-<https://mapa-risco-urbano-production.up.railway.app/api/layers>
+<https://mapasp.com/api/layers>
 
 Exemplo de resposta ao vivo (12/set/2026): 19 pontos de alagamento CGE,
 77 alertas CEMADEN, 1.415 células H3 de crime (SSP jan–jul/2026),
