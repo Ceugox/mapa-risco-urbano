@@ -1,42 +1,19 @@
-import json
-
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
 from ..config import settings
-from ..db import distance_m, get_snapshot
 from ..ingest import ingest_text
+from ..risk import summarize
 
 router = APIRouter(prefix="/api/webhooks/whatsapp")
 
-NEARBY_M = 1500.0
-LAYERS = ("alagamento", "cemaden", "reports")
-
 
 def _nearby_summary(lat: float, lon: float) -> str:
-    lines = []
-    for layer in LAYERS:
-        snapshot = get_snapshot(layer)
-        if not snapshot or not snapshot["ok"]:
-            continue
-        features = json.loads(snapshot["payload_json"]).get("features", [])
-        near = []
-        for feature in features:
-            coords = feature.get("geometry", {}).get("coordinates") or []
-            if len(coords) < 2:
-                continue
-            distance = distance_m(lat, lon, coords[1], coords[0])
-            if distance <= NEARBY_M:
-                near.append((distance, feature.get("properties", {})))
-        near.sort(key=lambda item: item[0])
-        if near:
-            label = {"alagamento": "Alagamento", "cemaden": "Alerta CEMADEN", "reports": "Relato"}[layer]
-            top = near[0]
-            detail = top[1].get("descricao") or top[1].get("description") or top[1].get("municipio") or ""
-            lines.append(f"• {label} a {int(top[0])} m: {detail[:80]}")
+    result = summarize(lat, lon)
+    lines = [f"• {item['label']}" for item in result["items"]]
     if not lines:
-        return "Nenhum risco ativo num raio de 1,5 km desse ponto."
+        return "Nenhum risco ativo num raio de 800 m desse ponto."
     return "Riscos ativos perto de você:\n" + "\n".join(lines[:5])
 
 
