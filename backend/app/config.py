@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     whatsapp_token: str = ""
     whatsapp_phone_id: str = ""
     admin_password: str = ""
+    canonical_host: str = ""
     analytics_salt: str = ""
     analytics_retention_days: int = 90
     # Roteirizadores OSRM públicos, baixo volume de uso. Identificamos o

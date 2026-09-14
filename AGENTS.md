@@ -46,6 +46,7 @@ backend/
   app/routing.py           fetch_routes (OSRM) e score_route (pesos por camada,
                            ajustados por modo/horário em time_weights)
   app/text.py              normaliza() de logradouros (sem dependências; usado por db, geocoding, ingest)
+  app/canonical.py         301/308 de www e do domínio *.railway.app para CANONICAL_HOST (inerte sem a var)
   app/netutil.py           client_ip(): primeiro salto do X-Forwarded-For atrás do proxy do Railway
   app/analytics.py         middleware ASGI de acesso (buffer em memória -> access_log),
                            agregação por período, retenção; sem IP persistido
@@ -164,6 +165,9 @@ no mapa -> modal -> toast), Esc cancela o modo.
 - Geocodificação do CGE usa malha viária GeoSampa (`segmento_logradouro`) com
   cache; pontes/viadutos/apelidos ainda falham em alguns casos.
 - Sem moderação real de relatos.
+- Domínio: `mapasp.com` e `www.mapasp.com` são custom domains do serviço no Railway; DNS na
+  Cloudflare com proxy desligado (nuvem cinza), senão o certificado trava em VALIDATING_OWNERSHIP.
+  `CANONICAL_HOST=mapasp.com` liga o redirect de www e do domínio Railway para o apex.
 - Observabilidade: `/admin` (senha em `ADMIN_PASSWORD`; `ANALYTICS_SALT` tempera o hash
   diário de visitante). O middleware ignora `/health`, `/api/admin/*` e `/api/events`.
   Flush a cada 15 s pelo scheduler; retenção `ANALYTICS_RETENTION_DAYS` (90). A agregação
