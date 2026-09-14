@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from app import canonical
@@ -32,8 +34,17 @@ def test_health_e_hosts_internos_ficam_de_fora(canonical_host):
     assert canonical.redirect_target("localhost:8000", "/", "") is None
 
 
-@pytest.mark.anyio
-async def test_middleware_responde_301_para_get_e_308_para_post(canonical_host):
+def test_middleware_responde_301_para_get_e_308_para_post(canonical_host):
+    """Exercita o middleware ASGI direto, sem plugin de async.
+
+    Com `@pytest.mark.anyio` a contagem da suíte dependia de o trio estar
+    instalado ou não (109 na máquina do autor, 108 a partir do
+    requirements.txt). asyncio.run mantém o resultado igual em todo ambiente.
+    """
+    asyncio.run(_exercita_middleware())
+
+
+async def _exercita_middleware():
     sent = []
 
     async def app(scope, receive, send):

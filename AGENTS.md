@@ -94,6 +94,19 @@ marcando `X-From-Cache: 1` quando a rede falha). `/api/admin`, `/api/events`,
 `activate` limpa caches versionados antigos (`mapasp-shell-*`,
 `mapasp-assets-*`). O SW só é registrado em produção (`main.tsx`).
 
+## Preparar um checkout novo
+
+```bash
+bash scripts/setup.sh
+```
+
+Cria `backend/.venv` com os requirements e instala `frontend/node_modules` pelo
+mirror do Yarn (o registro npm público está bloqueado nesta rede). É idempotente
+e é o setup hook que o Orca roda ao criar um worktree com `--setup run`. Um
+worktree que se instala sozinho é o que evita a junction para o checkout
+principal, que em 14/09/2026 foi seguida por `git worktree remove --force` e
+apagou o `node_modules` de verdade.
+
 ## Rodar
 
 Requisitos: Python 3.10+, Node 20.
