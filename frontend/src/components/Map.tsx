@@ -1,5 +1,6 @@
 import {
   APIProvider,
+  Circle,
   InfoWindow,
   Map as GoogleMap,
   Marker,
@@ -18,12 +19,31 @@ const center = { lat: -23.55, lng: -46.63 };
 const crimeColors = ["#fef3c7", "#fdba74", "#f97316", "#dc2626", "#7f1d1d"];
 const sources: Record<LayerName, string> = {
   alagamento: "CGE-SP",
+  alagamento_hist: "CGE-SP, histórico",
   cemaden: "CEMADEN",
   inmet: "INMET",
   clima: "Open-Meteo",
   crime: "SSP-SP",
   reports: "Comunidade",
 };
+const FLOOD_HIST_MIN_RADIUS = 60;
+const FLOOD_HIST_MAX_RADIUS = 300;
+const FLOOD_HIST_MAX_EPISODES = 10;
+
+function floodHistRadius(episodes: number) {
+  const ratio = Math.min(1, Math.max(0, episodes / FLOOD_HIST_MAX_EPISODES));
+  return FLOOD_HIST_MIN_RADIUS + ratio * (FLOOD_HIST_MAX_RADIUS - FLOOD_HIST_MIN_RADIUS);
+}
+
+function formatLastSeen(value: string | null | undefined) {
+  if (!value) return "data desconhecida";
+  return new Date(value).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 const mapStyles = [
   { featureType: "poi", stylers: [{ visibility: "off" }] },
   { featureType: "transit", stylers: [{ visibility: "off" }] },
@@ -124,6 +144,26 @@ function MapMarkers({
               onClick={() => onSelect(feature, "alagamento")}
             />
           ) : null;
+        })}
+      {enabled.alagamento_hist &&
+        (data.alagamento_hist?.features ?? []).map((feature, index) => {
+          const position = pointPosition(feature);
+          if (!position) return null;
+          const episodes = numberProperty(feature, "episodes", 1);
+          return (
+            <Circle
+              key={`ah${index}`}
+              center={position}
+              radius={floodHistRadius(episodes)}
+              strokeColor={layerColors.alagamento}
+              strokeWeight={1.5}
+              strokeOpacity={0.7}
+              fillColor={layerColors.alagamento}
+              fillOpacity={0.2}
+              clickable={!reportMode}
+              onClick={() => onSelect(feature, "alagamento_hist")}
+            />
+          );
         })}
       {enabled.cemaden &&
         (data.cemaden?.features ?? []).map((feature, index) => {
@@ -325,30 +365,34 @@ export function MapView({
                   <span>{formatTimestamp(selectedTimestamp)}</span>
                 </div>
                 <strong>
-                  {textProperty(
-                    selected.feature,
-                    "municipio",
-                    textProperty(
-                      selected.feature,
-                      "via",
-                      textProperty(selected.feature, "nome", labels[selected.layer]),
-                    ),
-                  )}
+                  {selected.layer === "alagamento_hist"
+                    ? textProperty(selected.feature, "name", labels[selected.layer])
+                    : textProperty(
+                        selected.feature,
+                        "municipio",
+                        textProperty(
+                          selected.feature,
+                          "via",
+                          textProperty(selected.feature, "nome", labels[selected.layer]),
+                        ),
+                      )}
                 </strong>
                 <p>
-                  {textProperty(
-                    selected.feature,
-                    "descricao",
-                    textProperty(
-                      selected.feature,
-                      "evento",
-                      textProperty(
+                  {selected.layer === "alagamento_hist"
+                    ? `Alagou ${numberProperty(selected.feature, "episodes", 1)} vezes nos últimos ${numberProperty(selected.feature, "days", 30)} dias, última em ${formatLastSeen(selected.feature.properties.last_seen)}`
+                    : textProperty(
                         selected.feature,
-                        "description",
-                        `${numberProperty(selected.feature, "total") || ""} registros agregados`,
-                      ),
-                    ),
-                  )}
+                        "descricao",
+                        textProperty(
+                          selected.feature,
+                          "evento",
+                          textProperty(
+                            selected.feature,
+                            "description",
+                            `${numberProperty(selected.feature, "total") || ""} registros agregados`,
+                          ),
+                        ),
+                      )}
                 </p>
                 {selected.layer === "reports" && (
                   <button className="button ghost confirm-button" onClick={handleConfirm}>

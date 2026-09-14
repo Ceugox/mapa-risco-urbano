@@ -1,4 +1,5 @@
-export type LayerName = "alagamento" | "cemaden" | "inmet" | "clima" | "crime" | "reports";
+export type LayerName =
+  "alagamento" | "alagamento_hist" | "cemaden" | "inmet" | "clima" | "crime" | "reports";
 export type PointCoordinates = [number, number];
 export type PolygonCoordinates = [PointCoordinates[]];
 export type FeatureProperties = {
@@ -6,6 +7,7 @@ export type FeatureProperties = {
   via?: string;
   municipio?: string;
   nome?: string;
+  name?: string;
   descricao?: string;
   evento?: string;
   description?: string;
@@ -17,6 +19,9 @@ export type FeatureProperties = {
   created_at?: string;
   expires_at?: string;
   id?: string;
+  episodes?: number;
+  last_seen?: string;
+  days?: number;
 };
 export type Feature = {
   type: "Feature";
