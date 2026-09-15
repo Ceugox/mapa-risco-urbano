@@ -1,57 +1,149 @@
-# MapaSP — risco urbano de São Paulo
+# MapaSP — o mapa de risco urbano de São Paulo
 
-MVP de um mapa cívico que combina alertas oficiais, previsão do tempo, crime
-agregado e relatos anônimos da comunidade. O backend usa FastAPI + SQLite (Postgres via DATABASE_URL)
-(WAL); o frontend usa Vite, React, TypeScript e Google Maps.
+[![CI](https://github.com/Ceugox/mapa-risco-urbano/actions/workflows/ci.yml/badge.svg)](https://github.com/Ceugox/mapa-risco-urbano/actions/workflows/ci.yml)
+[![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-black)](LICENSE)
+[![App no ar](https://img.shields.io/badge/app-mapasp.com-c8f04c)](https://mapasp.com)
 
-## Executar
+**No ar em [mapasp.com](https://mapasp.com).** Código aberto, sem cadastro, de graça.
 
-Requisitos: Python 3.10 e Node 20.
+> 🏆 **1º lugar no Hack for Humanity São Paulo**, 12 de setembro de 2026 — hackathon da
+> [The AI Collective](https://theaicollective.com) na Universidade Anhembi Morumbi, no
+> desafio que o capítulo São Paulo escolheu por conta própria: **resiliência urbana**.
+> Construído do zero no dia, em quatro horas de hacking, sob a regra da casa: resolver um
+> problema da nossa comunidade.
+
+---
+
+## O problema
+
+36,5% dos brasileiros mudaram trajetos habituais no último ano por medo. 35,6% deixaram de
+sair à noite. Entre as mulheres, 41%. *(Datafolha para o Fórum Brasileiro de Segurança
+Pública, 2.004 entrevistas em 137 municípios.)*
+
+A informação que evitaria parte disso **já existe e é pública** — e está espalhada por seis
+órgãos, em seis formatos, nenhum deles feito para quem só quer saber se dá para ir a pé até
+o ponto de ônibus às 6h da manhã.
+
+O MapaSP junta tudo num mapa só e responde três perguntas:
+
+- **Qual o risco aqui e agora?** A sua vizinhança imediata — a célula H3 em que você está
+  mais as adjacentes, cerca de 800 m — resumida por camada.
+- **Qual o caminho mais seguro?** Rotas a pé ou de carro, pontuadas por risco, com peso
+  ajustado pelo horário da saída.
+- **Você chegou bem?** Um link que seu círculo acompanha ao vivo, sem instalar nada, que
+  expira sozinho.
+
+## O que tem no mapa
+
+| Camada | Fonte | Atualização | Observação |
+|---|---|---|---|
+| Alagamento agora | CGE-SP | a cada coleta | geocodificação própria sobre a malha do GeoSampa |
+| Recorrência de alagamento | histórico próprio do CGE | 30 dias corridos | episódios por ponto; começa desligada |
+| Deslizamento e hidrológico | CEMADEN | a cada coleta | alerta por município |
+| Clima severo | INMET avisos | a cada coleta | polígono de abrangência |
+| Clima | Open-Meteo | 15 min | observação e previsão |
+| Crime agregado | SSP-SP microdados | mensal, ~2 meses de atraso | jan–jul/2026; começa desligada |
+| Relatos da comunidade | quem está na rua | ao vivo | anônimos, expiram em 6 h ou 24 h |
+| Trânsito | Google Maps | tempo real | camada visual, não persistida |
+
+Cada camada mostra **a própria idade e o próprio status** na interface. Quando uma fonte
+cai, o mapa diz qual caiu e continua mostrando o último dado válido, carimbado. Crime tem
+dois meses de atraso e alagamento é quase ao vivo: misturar os dois sem avisar seria
+desonesto.
+
+## Princípios que o código respeita
+
+**Crime é sempre agregado, nunca individual.** A camada sai dos microdados da SSP-SP e é
+reduzida a células H3 de resolução 8 (~0,74 km²). Célula com menos de cinco ocorrências é
+descartada; registro com logradouro suprimido não é mapeado. Nenhum boletim, endereço ou
+vítima aparece. Hoje são **1.415 células e 222.523 ocorrências** de janeiro a julho de 2026.
+A camada **começa desligada**, e a legenda declara o período e o atraso. Mapa de segurança
+que estigmatiza a periferia não serve como mapa de segurança.
+
+**Não prometer tempo real onde não há.** Toda camada carrega a hora da última coleta.
+
+**Relato não pede quem você é.** Anônimo, sem dado pessoal, com limite por IP, confirmação
+por corroboração e expiração automática. Relato de segurança só fica visível com duas
+confirmações independentes.
+
+**Uma fonte que cai não derruba o mapa.** Coletores falham isolados, o erro é registrado, o
+último snapshot bom é preservado e a interface sinaliza.
+
+## Como ajudar
+
+O app está no ar, o código é aberto e estamos começando por São Paulo — mas o alcance disso
+depende de gente que hoje não está na mesa. Se você é uma dessas pessoas, [abra uma
+issue](https://github.com/Ceugox/mapa-risco-urbano/issues/new) e vamos conversar:
+
+**Prefeitura de São Paulo e Governo do Estado** — a camada mais quente do mapa é raspada de
+uma página HTML sem contrato, e a mais sensível chega com dois meses de atraso. Um endpoint
+estável do CGE e da COE, e a base da SSP com menos defasagem, mudam o produto de patamar. A
+CET tem dados de sinistro que hoje não estão aqui. O caminho inverso também vale: os relatos
+da comunidade são um sensor que a cidade ainda não tem.
+
+**Google e Waze** — o trânsito aparece pela Maps JS API e por isso é só visual: não entra no
+cálculo de rota nem é persistido, porque a licença não permite. Com [Waze for
+Cities](https://www.waze.com/wazeforcities) ou um acordo equivalente, alerta de via e
+incidente entram no score da rota. Cota de Maps para uso cívico também resolve um gargalo
+real.
+
+**Plataformas e infraestrutura** — hospedagem, banco, CDN, tiles de mapa, geocodificação.
+Hoje o projeto roda em conta pessoal e a busca de endereço depende de serviço comunitário
+gratuito. Crédito de infra vira alcance direto.
+
+**Quem pesquisa segurança pública, mobilidade e clima** — o score de rota pondera camadas com
+pesos que vieram de julgamento, não de estudo. Se você trabalha com isso, o modelo precisa de
+você mais do que precisa de mais código.
+
+**Quem conhece o território** — um bairro, uma linha de ônibus, um trajeto que você faz todo
+dia. Onde o mapa erra, erra para quem está na rua.
+
+**Quem programa** — as issues abertas e o `AGENTS.md` dizem o que falta. Toda contribuição
+entra pela mesma porta: CI verde e a seção de verificação abaixo.
+
+## Rodar localmente
+
+Requisitos: Python 3.10+ e Node 20. Um checkout novo se instala sozinho:
 
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python scripts/build_crime_layer.py
-uvicorn app.main:app --reload
+node scripts/setup.mjs
 ```
 
-Em outro terminal:
+Depois, backend e frontend em terminais separados:
 
 ```bash
-cd frontend
-npm install
-cp .env.example .env
-# preencha VITE_GOOGLE_MAPS_API_KEY no .env localmente
-npm run dev
+uvicorn app.main:app --reload --app-dir backend    # http://localhost:8000
+npm --prefix frontend run dev                      # http://localhost:5173
 ```
 
-Ou use `make dev` a partir da raiz depois de instalar as dependências. O
-backend expõe `http://localhost:8000`; a interface expõe `http://localhost:5173`.
-Nenhuma chave é incluída no repositório.
+Copie `frontend/.env.example` para `frontend/.env` e preencha `VITE_GOOGLE_MAPS_API_KEY`.
+**Nenhuma chave vive no repositório.** A camada de crime já vem versionada em
+`backend/data/crime_h3.json`; só rode `python backend/scripts/build_crime_layer.py` para
+regenerá-la, porque ele baixa ~111 MB da SSP-SP.
 
 ## Verificação
+
+Obrigatória em qualquer alteração. Cada linha é um comando único, rodado da raiz, e o CI
+roda exatamente estes passos:
 
 ```bash
 ruff check backend
 pytest backend/tests
-cd frontend && npm run build && npx tsc --noEmit
+npm --prefix frontend run build
+npm --prefix frontend run lint
 ```
 
-## Fontes
+## Arquitetura
 
-| Camada | Fonte | Acesso | Frescura medida | Georreferência | Veredito |
-|---|---|---|---|---|---|
-| Alagamento (agora) | CGE-SP | scraping HTML (sem JS) | página carimbada 08:58 do mesmo dia; 17 pontos ativos | **texto** (via + referência) | Viável — exige geocodificação própria |
-| Alagamento (histórico) | GeoSampa WFS | API aberta (OGC) | última carga 02/09/2026, ocorrências até 04/2026 | ponto | Viável, defasagem ~5 meses |
-| Clima severo | INMET avisos | API pública JSON | 4 avisos vigentes hoje, com polígono e municípios | polígono | Viável |
-| Clima (observação/previsão) | Open-Meteo | API pública, sem chave | leitura a cada 15 min | ponto/grade | Viável |
-| Clima (estações) | INMET estações | API devolve 204 (vazio) para leituras | — | — | **Não confiável sem token** |
-| Deslizamento / hidrológico | CEMADEN `wsAlertas2` | JSON não documentado | atualizado 14:37 UTC (mesmo minuto da coleta); 145 alertas, 75 em SP | ponto por município | Viável, tratar como scraping |
-| Crime | SSP-SP microdados | download XLSX direto (111 MB, 2026) | mês completo mais recente: **julho/2026** (~2 meses de atraso) | 76,9% com lat/lon | Viável, camada mensal |
-| Trânsito | Google Maps (decisão com você) | Maps JS API | tempo real | camada visual | Visualização OK; não persiste |
+FastAPI e SQLite com WAL (ou Postgres, via `DATABASE_URL`) no backend; Vite, React,
+TypeScript e Google Maps no frontend; PWA instalável com o último snapshot disponível
+offline. Os coletores rodam em scheduler dentro do próprio processo. `AGENTS.md` tem o mapa
+completo do código, as regras que não podem ser quebradas e o estado conhecido de cada
+pendência — leia antes de mexer.
 
-Relatos expiram em seis ou 24 horas conforme categoria. A camada criminal é
-sempre agregada em células H3 e remove células com menos de cinco registros;
-nenhum boletim individual é exposto.
+## Licença
+
+MIT. Ver [LICENSE](LICENSE).
+
+Os dados vêm de CGE-SP, CEMADEN, INMET, Open-Meteo, SSP-SP e GeoSampa, cada um sob os
+próprios termos. O trânsito é do Google Maps e não é redistribuído.
