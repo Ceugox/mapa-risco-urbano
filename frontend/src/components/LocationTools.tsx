@@ -1,5 +1,5 @@
 import { Marker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { Place, useSuggestions } from "../places";
 
 const SP_BOUNDS = { north: -23.3, south: -24.05, east: -46.3, west: -47.0 };
@@ -10,6 +10,7 @@ export function LocationTools({ reportMode }: { reportMode: boolean }) {
   const map = useMap();
   const geocoding = useMapsLibrary("geocoding");
   const [query, setQuery] = useState("");
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const [picked, setPicked] = useState<Picked | null>(null);
   const [following, setFollowing] = useState(false);
   const [status, setStatus] = useState("");
@@ -22,6 +23,7 @@ export function LocationTools({ reportMode }: { reportMode: boolean }) {
   const watchRef = useRef<number | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const statusTimer = useRef<number>(0);
+  const suggestionListId = useId();
 
   function flash(message: string) {
     setStatus(message);
@@ -31,6 +33,7 @@ export function LocationTools({ reportMode }: { reportMode: boolean }) {
 
   function chooseSuggestion(place: Place) {
     setQuery(place.label.split(",")[0]);
+    setActiveSuggestion(-1);
     clearSuggestions();
     pick(place.lat, place.lng, place.label, "search");
   }
@@ -97,7 +100,7 @@ export function LocationTools({ reportMode }: { reportMode: boolean }) {
     if (!q) return;
     // Enter com a lista aberta escolhe a primeira, como no Maps.
     if (suggestions.length > 0) {
-      chooseSuggestion(suggestions[0]);
+      chooseSuggestion(suggestions[activeSuggestion >= 0 ? activeSuggestion : 0]);
       return;
     }
     setStatus("Buscando endereço…");
@@ -132,6 +135,23 @@ export function LocationTools({ reportMode }: { reportMode: boolean }) {
     }
   }
 
+  function navigateSuggestions(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Escape") {
+      clearSuggestions();
+      setActiveSuggestion(-1);
+      return;
+    }
+    if (suggestions.length === 0) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveSuggestion((current) => Math.min(current + 1, suggestions.length - 1));
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveSuggestion((current) => Math.max(current - 1, 0));
+    }
+  }
+
   useEffect(
     () => () => {
       stopWatch();
@@ -149,10 +169,19 @@ export function LocationTools({ reportMode }: { reportMode: boolean }) {
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
+              setActiveSuggestion(-1);
               querySuggestions(event.target.value);
             }}
+            onKeyDown={navigateSuggestions}
             placeholder="Rua, avenida ou referência…"
             aria-label="Buscar rua ou endereço em São Paulo"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls={suggestionListId}
+            aria-expanded={suggestions.length > 0}
+            aria-activedescendant={
+              activeSuggestion >= 0 ? `${suggestionListId}-option-${activeSuggestion}` : undefined
+            }
             autoComplete="off"
           />
           <button type="submit" className="button secondary" aria-label="Buscar">
@@ -160,10 +189,17 @@ export function LocationTools({ reportMode }: { reportMode: boolean }) {
           </button>
         </form>
         {suggestions.length > 0 && (
-          <ul className="locate-suggestions" role="listbox">
-            {suggestions.map((place) => (
-              <li key={`${place.label}-${place.lat}-${place.lng}`}>
-                <button type="button" onClick={() => chooseSuggestion(place)}>
+          <ul className="locate-suggestions" id={suggestionListId} role="listbox">
+            {suggestions.map((place, index) => (
+              <li key={`${place.label}-${place.lat}-${place.lng}`} role="presentation">
+                <button
+                  id={`${suggestionListId}-option-${index}`}
+                  type="button"
+                  role="option"
+                  aria-selected={activeSuggestion === index}
+                  onMouseEnter={() => setActiveSuggestion(index)}
+                  onClick={() => chooseSuggestion(place)}
+                >
                   {place.label}
                 </button>
               </li>

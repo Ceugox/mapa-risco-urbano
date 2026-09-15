@@ -677,6 +677,10 @@ h1 span {
   flex: 1;
 }
 
+.layer-compact-status {
+  display: none;
+}
+
 .info-card {
   min-width: 240px;
   max-width: 280px;
@@ -947,8 +951,9 @@ h1 span {
   }
 
   .layer-panel:not(.open) {
-    width: auto;
-    padding: 8px 14px;
+    width: calc(100% - 16px);
+    padding: 8px;
+    border-radius: 10px;
   }
 
   .layer-panel-header {
@@ -982,7 +987,15 @@ h1 span {
   }
 
   .layer-row input {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  .layer-row:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .layer-name {
@@ -995,8 +1008,22 @@ h1 span {
     display: none;
   }
 
+  .layer-compact-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin: 8px 2px 0;
+    color: var(--fg-2);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
   .crime-legend {
-    display: none;
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 8px;
+    font-size: 8px;
   }
 
   .map-toolbar {
@@ -1433,7 +1460,7 @@ h1 span {
   overflow-y: auto;
 }
 
-.route-suggestions button {
+.route-suggestions li {
   display: block;
   width: 100%;
   padding: 8px;
@@ -1446,7 +1473,8 @@ h1 span {
   border-radius: 6px;
 }
 
-.route-suggestions button:hover {
+.route-suggestions li:hover,
+.route-suggestions li.active {
   background: var(--bg-2);
   color: var(--fg-1);
 }
@@ -1470,9 +1498,8 @@ h1 span {
 }
 
 .route-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: grid;
+  gap: 4px;
   padding: 8px;
   border: 1px solid var(--line-1);
   border-radius: 8px;
@@ -1481,6 +1508,38 @@ h1 span {
   font-size: 12px;
   cursor: pointer;
   text-align: left;
+}
+
+.route-option-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.route-option-main strong,
+.route-option-main span span {
+  display: block;
+}
+
+.route-option-main strong {
+  color: var(--fg-1);
+  font-size: 12px;
+}
+
+.route-option-main span span,
+.route-tradeoff,
+.route-score-note {
+  color: var(--fg-2);
+  font-size: 10px;
+}
+
+.route-tradeoff {
+  padding-left: 36px;
+}
+
+.route-score-note {
+  margin: 4px 0 0;
+  line-height: 1.4;
 }
 
 .route-option.active {

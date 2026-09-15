@@ -49,6 +49,10 @@ export function LayerPanel({
   const [open, setOpen] = useState(() => !window.matchMedia("(max-width: 767px)").matches);
   const activeCount = Object.values(enabled).filter(Boolean).length;
   const downCount = statuses.filter((status) => !status.ok).length;
+  const latestUpdate = statuses
+    .map((status) => status.fetched_at)
+    .filter((value): value is string => Boolean(value))
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
 
   return (
     <aside className={`layer-panel${open ? " open" : ""}`} aria-label="Camadas do mapa">
@@ -94,6 +98,14 @@ export function LayerPanel({
           );
         })}
       </div>
+      <p className="layer-compact-status" aria-live="polite">
+        <span>Atualização mais recente {age(latestUpdate ?? null)}</span>
+        {downCount > 0 && (
+          <span>
+            {downCount} fonte{downCount === 1 ? "" : "s"} indisponível(is)
+          </span>
+        )}
+      </p>
       {enabled.crime && (
         <div className="crime-legend" aria-label="Legenda de ocorrências criminais">
           <div className="crime-swatches">
@@ -102,7 +114,7 @@ export function LayerPanel({
             ))}
           </div>
           <small>menos → mais ocorrências</small>
-          <small>jan–jul/2026 · células ≥5</small>
+          <small>jan–jul/2026 · células ≥5 · atraso aproximado de 2 meses</small>
         </div>
       )}
     </aside>

@@ -313,6 +313,17 @@ export function MapView({
     }
   }
 
+  useEffect(() => {
+    if (!reportMode || reportPoint) return;
+    const cancelWithEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      onToggleReportMode();
+    };
+    window.addEventListener("keydown", cancelWithEscape);
+    return () => window.removeEventListener("keydown", cancelWithEscape);
+  }, [onToggleReportMode, reportMode, reportPoint]);
+
   return (
     <APIProvider apiKey={key}>
       <div className={`map-wrap${reportMode ? " report-mode" : ""}`} tabIndex={-1} data-map-surface>

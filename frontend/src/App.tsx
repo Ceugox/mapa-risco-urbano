@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getLayer, getLayers, lastLayersFromCache, track } from "./api";
 import { labels } from "./components/LayerPanel";
 import { MapView } from "./components/Map";
@@ -85,6 +85,7 @@ export default function App() {
   );
   const [fromCache, setFromCache] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
+  const reportOpenerRef = useRef<HTMLElement | null>(null);
 
   async function refresh() {
     try {
@@ -107,9 +108,12 @@ export default function App() {
   const closeReport = () => {
     setReportPoint(null);
     setReportMode(false);
+    window.requestAnimationFrame(() => reportOpenerRef.current?.focus());
   };
 
   const activateReport = () => {
+    reportOpenerRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setReportMode(true);
     track("report_mode_opened");
     focusMap();
@@ -240,7 +244,10 @@ export default function App() {
               onToggle={(layer) => setEnabled((state) => ({ ...state, [layer]: !state[layer] }))}
               reportMode={reportMode}
               onToggleReportMode={() => (reportMode ? closeReport() : activateReport())}
-              onMapClick={setReportPoint}
+              onMapClick={(point) => {
+                setReportPoint(point);
+                setReportMode(false);
+              }}
               reportFeatures={reports}
               reportPoint={reportPoint}
               unavailableCount={unavailableCount}

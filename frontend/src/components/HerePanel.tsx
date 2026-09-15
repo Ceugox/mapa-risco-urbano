@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { KeyboardEvent, useEffect, useId, useState } from "react";
 import { getRiskHere, RiskHereResult } from "../api";
-import { Place, searchPlaces } from "../places";
+import { Place, useSuggestions } from "../places";
 
 type SlotKey = "here" | "home" | "work";
 type SavedPlace = { label: string; lat: number; lng: number; lastLevel?: string };
@@ -9,7 +9,6 @@ type PlacesStore = Partial<Record<"home" | "work", SavedPlace>>;
 type SlotState = {
   place?: SavedPlace;
   query: string;
-  suggestions: Place[];
   result?: RiskHereResult;
   queriedAt?: string;
   changed: boolean;
@@ -31,7 +30,7 @@ const LEVEL_VAR: Record<string, string> = {
 };
 
 function emptySlot(): SlotState {
-  return { query: "", suggestions: [], changed: false, status: "", loading: false };
+  return { query: "", changed: false, status: "", loading: false };
 }
 
 function loadPlaces(): PlacesStore {
@@ -110,22 +109,12 @@ export function HerePanel() {
     );
   }
 
-  async function suggest(key: "home" | "work", q: string) {
-    patch(key, { query: q });
-    if (q.trim().length < 3) {
-      patch(key, { suggestions: [] });
-      return;
-    }
-    const found = await searchPlaces(q);
-    patch(key, { suggestions: found });
-  }
-
   function choosePlace(key: "home" | "work", found: Place) {
     const place: SavedPlace = { label: shortLabel(found.label), lat: found.lat, lng: found.lng };
     const store = loadPlaces();
     store[key] = place;
     persistPlaces(store);
-    patch(key, { place, query: place.label, suggestions: [] });
+    patch(key, { place, query: place.label });
     evaluate(key, place.lat, place.lng, place);
   }
 
@@ -151,7 +140,7 @@ export function HerePanel() {
             slotKey={key}
             title={SLOT_TITLE[key]}
             state={slots[key]}
-            onQueryChange={(q) => suggest(key as "home" | "work", q)}
+            onQueryChange={(q) => patch(key as "home" | "work", { query: q })}
             onChoose={(place) => choosePlace(key as "home" | "work", place)}
           />
         ))}
@@ -174,6 +163,43 @@ function HereCard({
   onChoose: (place: Place) => void;
 }) {
   const { result } = state;
+  const { suggestions, query: querySuggestions, clear: clearSuggestions } = useSuggestions();
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
+  const suggestionListId = useId();
+
+  function changeQuery(query: string) {
+    setActiveSuggestion(-1);
+    onQueryChange(query);
+    querySuggestions(query);
+  }
+
+  function chooseSuggestion(place: Place) {
+    setActiveSuggestion(-1);
+    clearSuggestions();
+    onChoose(place);
+  }
+
+  function navigateSuggestions(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Escape") {
+      clearSuggestions();
+      setActiveSuggestion(-1);
+      return;
+    }
+    if (suggestions.length === 0) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveSuggestion((current) => Math.min(current + 1, suggestions.length - 1));
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveSuggestion((current) => Math.max(current - 1, 0));
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      chooseSuggestion(suggestions[activeSuggestion >= 0 ? activeSuggestion : 0]);
+    }
+  }
+
   return (
     <div className="here-card">
       <div className="here-card-head">
@@ -189,15 +215,31 @@ function HereCard({
         <div className="here-search">
           <input
             value={state.query}
-            onChange={(event) => onQueryChange(event.target.value)}
+            onChange={(event) => changeQuery(event.target.value)}
+            onKeyDown={navigateSuggestions}
             placeholder={`Endereço de ${title.toLowerCase()}…`}
             aria-label={`Endereço de ${title}`}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls={suggestionListId}
+            aria-expanded={suggestions.length > 0}
+            aria-activedescendant={
+              activeSuggestion >= 0 ? `${suggestionListId}-option-${activeSuggestion}` : undefined
+            }
+            autoComplete="off"
           />
-          {state.suggestions.length > 0 && (
-            <ul className="here-suggestions" role="listbox">
-              {state.suggestions.map((place, index) => (
-                <li key={index}>
-                  <button type="button" onClick={() => onChoose(place)}>
+          {suggestions.length > 0 && (
+            <ul className="here-suggestions" id={suggestionListId} role="listbox">
+              {suggestions.map((place, index) => (
+                <li key={index} role="presentation">
+                  <button
+                    id={`${suggestionListId}-option-${index}`}
+                    type="button"
+                    role="option"
+                    aria-selected={activeSuggestion === index}
+                    onMouseEnter={() => setActiveSuggestion(index)}
+                    onClick={() => chooseSuggestion(place)}
+                  >
                     {place.label}
                   </button>
                 </li>

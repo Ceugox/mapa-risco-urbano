@@ -63,6 +63,9 @@ export function useSuggestions() {
         return;
       }
       const minhaVez = ++sequencia.current;
+      // Não mantenha opções da consulta anterior visíveis durante a pausa:
+      // elas não correspondem mais ao conteúdo do campo.
+      setSuggestions([]);
       setSearching(true);
       timer.current = window.setTimeout(async () => {
         const controller = new AbortController();
@@ -74,7 +77,10 @@ export function useSuggestions() {
         } catch {
           if (minhaVez === sequencia.current) setSuggestions([]);
         } finally {
-          if (minhaVez === sequencia.current) setSearching(false);
+          if (minhaVez === sequencia.current) {
+            emVoo.current = undefined;
+            setSearching(false);
+          }
         }
       }, PAUSA_MS);
     },

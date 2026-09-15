@@ -1,5 +1,5 @@
-import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import type { FormEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createReport, track } from "../api";
 import { Feature } from "../types";
 
@@ -23,14 +23,44 @@ export function ReportForm({
   const [category, setCategory] = useState<(typeof categories)[number][0]>("alagamento");
   const [description, setDescription] = useState("");
   const [message, setMessage] = useState("");
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      onClose();
     };
     window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [onClose]);
+
+  function trapFocus(event: ReactKeyboardEvent<HTMLFormElement>) {
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(
+      formRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      ) ?? [],
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!first || !last) return;
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,13 +76,21 @@ export function ReportForm({
   return (
     <div className="modal-backdrop" role="presentation">
       <form
+        ref={formRef}
         className="report-modal"
         onSubmit={submit}
+        onKeyDown={trapFocus}
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-title"
       >
-        <button type="button" className="close" onClick={onClose} aria-label="Fechar">
+        <button
+          ref={closeButtonRef}
+          type="button"
+          className="close"
+          onClick={onClose}
+          aria-label="Fechar"
+        >
           ×
         </button>
         <p className="eyebrow">RELATO DA COMUNIDADE</p>

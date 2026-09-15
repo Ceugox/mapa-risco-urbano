@@ -1,5 +1,5 @@
 import { Marker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
-import { useEffect, useRef, useState } from "react";
+import { KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import {
   createTrip,
   finishTrip,
@@ -104,6 +104,7 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
     clear: clearSuggestions,
   } = useSuggestions();
   const [suggestFor, setSuggestFor] = useState<"origin" | "dest" | null>(null);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const [routes, setRoutes] = useState<RouteResult[]>([]);
   const [selected, setSelected] = useState(0);
   const [status, setStatus] = useState("");
@@ -118,6 +119,7 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
   const linesRef = useRef<google.maps.Polyline[]>([]);
   const watchIdRef = useRef<number | null>(null);
   const lastSentRef = useRef(0);
+  const suggestionListId = useId();
 
   function stopWatch() {
     if (watchIdRef.current !== null && navigator.geolocation) {
@@ -234,6 +236,7 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
 
   function suggest(which: "origin" | "dest", q: string) {
     setSuggestFor(which);
+    setActiveSuggestion(-1);
     querySuggestions(q);
   }
 
@@ -247,6 +250,33 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
     }
     clearSuggestions();
     setSuggestFor(null);
+    setActiveSuggestion(-1);
+  }
+
+  useEffect(() => {
+    setActiveSuggestion(suggestions.length ? 0 : -1);
+  }, [suggestions]);
+
+  function handleSuggestionKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!suggestions.length) {
+      if (event.key === "Escape") clearSuggestions();
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveSuggestion((current) => (current + 1) % suggestions.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveSuggestion((current) => (current <= 0 ? suggestions.length - 1 : current - 1));
+    } else if (event.key === "Enter" && activeSuggestion >= 0) {
+      event.preventDefault();
+      choose(suggestions[activeSuggestion]);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      clearSuggestions();
+      setSuggestFor(null);
+      setActiveSuggestion(-1);
+    }
   }
 
   function useGps() {
@@ -381,6 +411,19 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
   }
 
   const route = routes[selected];
+  const recommended = routes[0];
+
+  function routeTradeoff(item: RouteResult, index: number) {
+    if (index === 0) return "Menor risco entre as opções";
+    const riskDifference = item.score - recommended.score;
+    const durationDifference = item.duration_min - recommended.duration_min;
+    const riskText = riskDifference
+      ? `${riskDifference} ponto${riskDifference === 1 ? "" : "s"} de risco relativo a mais`
+      : "mesmo risco relativo";
+    if (!durationDifference) return riskText;
+    const durationText = `${Math.abs(durationDifference)} min ${durationDifference > 0 ? "a mais" : "a menos"}`;
+    return `${riskText} · ${durationText}`;
+  }
 
   return (
     <div className={`route-panel${open ? " open" : ""}`}>
@@ -451,8 +494,20 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
                 suggest("origin", e.target.value);
               }}
               onFocus={() => setSuggestFor("origin")}
+              onKeyDown={handleSuggestionKeyDown}
               placeholder="Origem: rua, lugar ou negócio…"
               aria-label="Origem da rota"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls={
+                suggestFor === "origin" && suggestions.length > 0 ? suggestionListId : undefined
+              }
+              aria-expanded={suggestFor === "origin" && suggestions.length > 0}
+              aria-activedescendant={
+                suggestFor === "origin" && activeSuggestion >= 0
+                  ? `${suggestionListId}-${activeSuggestion}`
+                  : undefined
+              }
               size={10}
             />
             <button type="button" className="button ghost" onClick={useGps} title="Usar GPS">
@@ -468,18 +523,36 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
                 suggest("dest", e.target.value);
               }}
               onFocus={() => setSuggestFor("dest")}
+              onKeyDown={handleSuggestionKeyDown}
               placeholder="Destino: ex. barbeiro, trabalho, casa…"
               aria-label="Destino da rota"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls={
+                suggestFor === "dest" && suggestions.length > 0 ? suggestionListId : undefined
+              }
+              aria-expanded={suggestFor === "dest" && suggestions.length > 0}
+              aria-activedescendant={
+                suggestFor === "dest" && activeSuggestion >= 0
+                  ? `${suggestionListId}-${activeSuggestion}`
+                  : undefined
+              }
               size={10}
             />
           </div>
-          {suggestions.length > 0 && (
-            <ul className="route-suggestions" role="listbox">
-              {suggestions.map((place) => (
-                <li key={`${place.label}-${place.lat}-${place.lng}`}>
-                  <button type="button" onClick={() => choose(place)}>
-                    {place.label}
-                  </button>
+          {suggestFor && suggestions.length > 0 && (
+            <ul className="route-suggestions" id={suggestionListId} role="listbox">
+              {suggestions.map((place, index) => (
+                <li
+                  id={`${suggestionListId}-${index}`}
+                  key={`${place.label}-${place.lat}-${place.lng}`}
+                  role="option"
+                  aria-selected={index === activeSuggestion}
+                  className={index === activeSuggestion ? "active" : ""}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => choose(place)}
+                >
+                  {place.label}
                 </li>
               ))}
             </ul>
@@ -536,16 +609,28 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
                   className={`route-option${index === selected ? " active" : ""}`}
                   onClick={() => setSelected(index)}
                   type="button"
+                  aria-label={`${index === 0 ? "Rota recomendada, menor risco" : `Rota alternativa ${index}`}: ${routeTradeoff(item, index)}`}
                 >
-                  <span className="route-score" style={{ color: LEVEL_COLOR[item.level] }}>
-                    {item.score}
+                  <span className="route-option-main">
+                    <span className="route-score" style={{ color: LEVEL_COLOR[item.level] }}>
+                      {item.score}
+                    </span>
+                    <span>
+                      <strong>
+                        {index === 0 ? "Recomendada · menor risco" : `Alternativa ${index}`}
+                      </strong>
+                      <span>
+                        {item.distance_km} km · {item.duration_min} min · risco {item.level}
+                      </span>
+                    </span>
                   </span>
-                  <span>
-                    Rota {index + 1} · {item.distance_km} km · {item.duration_min} min
-                  </span>
-                  <span className="mono-label">{item.level}</span>
+                  <span className="route-tradeoff">{routeTradeoff(item, index)}</span>
                 </button>
               ))}
+              <p className="route-score-note">
+                Índice relativo de risco (0–100): menor é melhor. Trânsito visual não entra no
+                cálculo.
+              </p>
               {route && (
                 <div className="route-breakdown">
                   {Object.entries(route.breakdown)
