@@ -209,16 +209,23 @@ o motivo de a sugestão nunca corresponder ao que se acabou de digitar.
   Cloudflare, e a resposta traz `cf-cache-status`; o domínio `*.up.railway.app` responde
   `Server: railway-hikari`, sem nenhum header `cf-*`).
   `CANONICAL_HOST=mapasp.com` liga o redirect de www e do domínio Railway para o apex.
-- **A Cloudflare reescreve o Cache-Control na borda.** Com o proxy ligado, o Browser Cache TTL
-  da zona eleva o TTL das respostas que ela cacheia quando o origin manda menos que o
-  configurado. Medido em 15/09/2026: o app responde `/sw.js` com `no-cache, must-revalidate`
-  (confere com `uvicorn` local), e o que chega ao browser é `max-age=14400, must-revalidate` —
-  o `no-cache` virou 4 h e os outros tokens ficaram. `/assets/*.js` passa intacto porque
-  `max-age=31536000` já é maior que o TTL da zona, e `/` e `/manifest.webmanifest` passam
-  porque a Cloudflare não os cacheia por extensão. Antes de culpar `app/caching.py` por um
-  Cache-Control errado em produção, compare com o que o app devolve local: se divergir, é a
-  borda. A correção é na Cloudflare (Caching -> Configuration -> Browser Cache TTL =
-  "Respect Existing Headers", ou uma Cache Rule para `/sw.js`), não no Python.
+- **A Cloudflare pode reescrever o Cache-Control na borda — hoje não reescreve.** Em
+  15/09/2026 a zona foi posta em Browser Cache TTL = **"Respect Existing Headers"**
+  (Caching -> Configuration) e o header do app chega intacto ao browser; conferido nas oito
+  rotas. Não vá atrás desse sintoma: ele está resolvido.
+  O mecanismo fica registrado porque o Browser Cache TTL é um dropdown que alguém pode
+  remexer. Enquanto esteve em 4 h, ele elevava o TTL das respostas que a Cloudflare cacheia
+  quando o origin mandava menos: `/sw.js` saía do app como `no-cache, must-revalidate` e
+  chegava ao browser como `max-age=14400, must-revalidate` — o `no-cache` virava 4 h e os
+  outros tokens ficavam. `/assets/*` passava intacto porque `max-age=31536000` já era maior
+  que o TTL da zona, e `/` e `/manifest.webmanifest` passavam porque a Cloudflare não os
+  cacheia por extensão.
+  **Como separar app de borda**, se um Cache-Control errado reaparecer em produção: suba o
+  app local (`uvicorn`) e compare o header das mesmas rotas. Igual, o problema é
+  `app/caching.py`; diferente, é a borda, e a correção é na Cloudflare, não no Python.
+  Depois de mexer na config, lembre que as entradas já cacheadas continuam como estavam —
+  o `/sw.js` velho só saiu com um purge seletivo da URL. Um `?cb=<timestamp>` na ponta da
+  URL fura o edge e mostra o que o origin responde agora.
 - Observabilidade: `/admin` (senha em `ADMIN_PASSWORD`; `ANALYTICS_SALT` tempera o hash
   diário de visitante). O middleware ignora `/health`, `/api/admin/*` e `/api/events`.
   Flush a cada 15 s pelo scheduler; retenção `ANALYTICS_RETENTION_DAYS` (90). A agregação

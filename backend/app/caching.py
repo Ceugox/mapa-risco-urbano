@@ -8,11 +8,13 @@ deploy seguinte: 404 no CSS e no JS, e o app simplesmente não sobe. O `sw.js`
 vinha com `max-age=14400`, o que atrasava em até quatro horas a
 atualização do próprio cache do PWA.
 
-Limite conhecido: em `mapasp.com` o `/sw.js` continua chegando ao browser com
-`max-age=14400, must-revalidate`, apesar deste middleware. Não é falha daqui —
-o app devolve `no-cache, must-revalidate` (confirmado com `uvicorn` local) e a
-Cloudflare da zona, com o proxy ligado, eleva o TTL na borda. Ver a nota sobre
-domínio no AGENTS.md; a correção é na configuração da Cloudflare.
+Cuidado com a borda: em 15/09/2026 o `/sw.js` chegava ao browser com
+`max-age=14400, must-revalidate` apesar deste middleware, porque a Cloudflare
+da zona elevava o TTL. Não era falha daqui — o app já devolvia
+`no-cache, must-revalidate`. Foi resolvido pondo a zona em "Respect Existing
+Headers", e o header daqui chega intacto. Se divergir de novo, compare com o
+que o app responde local antes de mexer neste arquivo; ver a nota sobre domínio
+no AGENTS.md.
 
 A regra é a de sempre para site com asset versionado por hash: o HTML e os
 arquivos que apontam para ele revalidam sempre; o que tem hash no nome pode
