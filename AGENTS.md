@@ -48,6 +48,8 @@ backend/
                            ajustados por modo/horário em time_weights)
   app/text.py              normaliza() de logradouros (sem dependências; usado por db, geocoding, ingest)
   app/canonical.py         301/308 de www e do domínio *.railway.app para CANONICAL_HOST (inerte sem a var)
+  app/caching.py           middleware ASGI de Cache-Control por caminho (HTML/sw/manifest revalidam,
+                           /assets/ com hash immutable, imagem e fonte um dia; /api e /health intactos)
   app/netutil.py           client_ip(): primeiro salto do X-Forwarded-For atrás do proxy do Railway
   app/analytics.py         middleware ASGI de acesso (buffer em memória -> access_log),
                            agregação por período, retenção; sem IP persistido
@@ -201,8 +203,22 @@ o motivo de a sugestão nunca corresponder ao que se acabou de digitar.
   cache; pontes/viadutos/apelidos ainda falham em alguns casos.
 - Sem moderação real de relatos.
 - Domínio: `mapasp.com` e `www.mapasp.com` são custom domains do serviço no Railway; DNS na
-  Cloudflare com proxy desligado (nuvem cinza), senão o certificado trava em VALIDATING_OWNERSHIP.
+  Cloudflare. O proxy precisa ficar **desligado (nuvem cinza) enquanto o certificado é emitido**,
+  senão trava em VALIDATING_OWNERSHIP; depois de emitido ele pode ser religado, e hoje está
+  **ligado** (em 15/09/2026 `mapasp.com` resolve para 104.21.81.245 / 172.67.192.34, faixas da
+  Cloudflare, e a resposta traz `cf-cache-status`; o domínio `*.up.railway.app` responde
+  `Server: railway-hikari`, sem nenhum header `cf-*`).
   `CANONICAL_HOST=mapasp.com` liga o redirect de www e do domínio Railway para o apex.
+- **A Cloudflare reescreve o Cache-Control na borda.** Com o proxy ligado, o Browser Cache TTL
+  da zona eleva o TTL das respostas que ela cacheia quando o origin manda menos que o
+  configurado. Medido em 15/09/2026: o app responde `/sw.js` com `no-cache, must-revalidate`
+  (confere com `uvicorn` local), e o que chega ao browser é `max-age=14400, must-revalidate` —
+  o `no-cache` virou 4 h e os outros tokens ficaram. `/assets/*.js` passa intacto porque
+  `max-age=31536000` já é maior que o TTL da zona, e `/` e `/manifest.webmanifest` passam
+  porque a Cloudflare não os cacheia por extensão. Antes de culpar `app/caching.py` por um
+  Cache-Control errado em produção, compare com o que o app devolve local: se divergir, é a
+  borda. A correção é na Cloudflare (Caching -> Configuration -> Browser Cache TTL =
+  "Respect Existing Headers", ou uma Cache Rule para `/sw.js`), não no Python.
 - Observabilidade: `/admin` (senha em `ADMIN_PASSWORD`; `ANALYTICS_SALT` tempera o hash
   diário de visitante). O middleware ignora `/health`, `/api/admin/*` e `/api/events`.
   Flush a cada 15 s pelo scheduler; retenção `ANALYTICS_RETENTION_DAYS` (90). A agregação

@@ -5,8 +5,14 @@ Por que existe: em 15/09/2026 o `index.html` era servido **sem**
 então um visitante que já tinha entrado recebia o HTML do deploy anterior, que
 aponta para `assets/index-<hash>.js`. Esse arquivo não existe mais depois do
 deploy seguinte: 404 no CSS e no JS, e o app simplesmente não sobe. O `sw.js`
-vinha com `max-age=14400` do proxy, o que atrasava em até quatro horas a
+vinha com `max-age=14400`, o que atrasava em até quatro horas a
 atualização do próprio cache do PWA.
+
+Limite conhecido: em `mapasp.com` o `/sw.js` continua chegando ao browser com
+`max-age=14400, must-revalidate`, apesar deste middleware. Não é falha daqui —
+o app devolve `no-cache, must-revalidate` (confirmado com `uvicorn` local) e a
+Cloudflare da zona, com o proxy ligado, eleva o TTL na borda. Ver a nota sobre
+domínio no AGENTS.md; a correção é na configuração da Cloudflare.
 
 A regra é a de sempre para site com asset versionado por hash: o HTML e os
 arquivos que apontam para ele revalidam sempre; o que tem hash no nome pode
