@@ -16,9 +16,15 @@
 
 ## O problema
 
-36,5% dos brasileiros mudaram trajetos habituais no último ano por medo. 35,6% deixaram de
-sair à noite. Entre as mulheres, 41%. *(Datafolha para o Fórum Brasileiro de Segurança
-Pública, 2.004 entrevistas em 137 municípios.)*
+Nos últimos 12 meses, por medo da violência, **36,5%** dos brasileiros de 16 anos ou mais
+mudaram um percurso rotineiro e **35,6%** deixaram de sair à noite. Entre as mulheres,
+**40,9%** deixaram de sair à noite, contra 29,8% dos homens — onze pontos de diferença.
+
+<sub>Fórum Brasileiro de Segurança Pública e Instituto Datafolha, [*"Medo do crime e
+eleições 2026: os gatilhos da
+insegurança"*](https://forumseguranca.org.br/wp-content/uploads/2026/05/os-gatilhos-da-inseguranca-relatorio-completo-2026.pdf).
+Campo em 9 e 10 de março de 2026, 2.004 entrevistas pessoais em 137 municípios, margem de
+±2 pontos, confiança de 95%.</sub>
 
 A informação que evitaria parte disso **já existe e é pública** — e está espalhada por seis
 órgãos, em seis formatos, nenhum deles feito para quem só quer saber se dá para ir a pé até
