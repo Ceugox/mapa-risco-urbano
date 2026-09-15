@@ -23,6 +23,7 @@ from .routers.admin import router as admin_router
 from .routers.auth import router as auth_router
 from .routers.ingest import router as ingest_router
 from .routers.layers import router as layers_router
+from .routers.places import router as places_router
 from .routers.reports import router as reports_router
 from .routers.risk import router as risk_router
 from .routers.route import router as route_router
@@ -100,6 +101,7 @@ app.add_middleware(
 app.include_router(admin_router)
 app.include_router(auth_router)
 app.include_router(layers_router)
+app.include_router(places_router)
 app.include_router(reports_router)
 app.include_router(ingest_router)
 app.include_router(whatsapp_router)

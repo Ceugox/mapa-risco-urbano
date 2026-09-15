@@ -1918,3 +1918,39 @@ h1 span {
     grid-template-columns: 1fr;
   }
 }
+
+/* Sugestões da busca do mapa: mesma linguagem da lista do painel de rota,
+   ancorada logo abaixo do campo. */
+.locate-suggestions {
+  display: grid;
+  margin: 6px 0 0;
+  padding: 0;
+  overflow: hidden;
+  max-height: 232px;
+  overflow-y: auto;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--bg-2);
+  list-style: none;
+}
+
+.locate-suggestions li + li {
+  border-top: 1px solid var(--line-1);
+}
+
+.locate-suggestions button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-1);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.locate-suggestions button:hover,
+.locate-suggestions button:focus-visible {
+  background: var(--bg-3);
+  color: var(--fg-0);
+}

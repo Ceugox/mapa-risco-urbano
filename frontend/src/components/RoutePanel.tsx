@@ -10,7 +10,7 @@ import {
   track,
   TripGoneError,
 } from "../api";
-import { Place, searchPlaces } from "../places";
+import { Place, useSuggestions } from "../places";
 
 const LEVEL_COLOR: Record<string, string> = {
   baixo: "#22c55e",
@@ -97,7 +97,12 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
   const [destQ, setDestQ] = useState("");
   const [origin, setOrigin] = useState<Place | null>(null);
   const [destination, setDestination] = useState<Place | null>(null);
-  const [suggestions, setSuggestions] = useState<Place[]>([]);
+  const {
+    suggestions,
+    searching,
+    query: querySuggestions,
+    clear: clearSuggestions,
+  } = useSuggestions();
   const [suggestFor, setSuggestFor] = useState<"origin" | "dest" | null>(null);
   const [routes, setRoutes] = useState<RouteResult[]>([]);
   const [selected, setSelected] = useState(0);
@@ -227,13 +232,9 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
     setTripStatus("Chegada registrada.");
   }
 
-  async function suggest(which: "origin" | "dest", q: string) {
-    if (q.trim().length < 3) return;
+  function suggest(which: "origin" | "dest", q: string) {
     setSuggestFor(which);
-    setStatus("Buscando…");
-    const found = await searchPlaces(q);
-    setSuggestions(found);
-    setStatus(found.length ? "" : "Nada encontrado — tente rua + referência.");
+    querySuggestions(q);
   }
 
   function choose(place: Place) {
@@ -244,7 +245,7 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
       setDestination(place);
       setDestQ(place.label.split(",")[0].split("—")[0].trim());
     }
-    setSuggestions([]);
+    clearSuggestions();
     setSuggestFor(null);
   }
 
@@ -283,7 +284,7 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
     setOriginQ(shortLabel(item.origin.label));
     setDestination(item.destination);
     setDestQ(shortLabel(item.destination.label));
-    setSuggestions([]);
+    clearSuggestions();
     persist(
       saved
         .map((entry) => (entry === item ? { ...entry, uses: entry.uses + 1 } : entry))
@@ -298,7 +299,7 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
       return;
     }
     setStatus("Calculando rotas…");
-    setSuggestions([]);
+    clearSuggestions();
     try {
       const departAt = departChoice === "at" ? departAtFromTime(departTime) : undefined;
       const result = await getRoute(
@@ -365,7 +366,7 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
     setDestination(null);
     setOriginQ("");
     setDestQ("");
-    setSuggestions([]);
+    clearSuggestions();
     setWeights({});
     setDepartHour(null);
   }
@@ -474,14 +475,17 @@ export function RoutePanel({ reportMode }: { reportMode: boolean }) {
           </div>
           {suggestions.length > 0 && (
             <ul className="route-suggestions" role="listbox">
-              {suggestions.map((place, index) => (
-                <li key={index}>
+              {suggestions.map((place) => (
+                <li key={`${place.label}-${place.lat}-${place.lng}`}>
                   <button type="button" onClick={() => choose(place)}>
                     {place.label}
                   </button>
                 </li>
               ))}
             </ul>
+          )}
+          {searching && suggestions.length === 0 && (
+            <p className="route-status">Buscando endereços…</p>
           )}
           <div className="route-actions">
             <button className="button primary" onClick={() => trace()} type="button">

@@ -38,6 +38,7 @@ backend/
   app/routers/ingest.py    POST /api/ingest/message (texto livre -> relato)
   app/routers/whatsapp.py  webhook Cloud API (GET verifica, POST recebe)
   app/routers/risk.py      GET /api/risk/here (resumo de risco perto de um ponto)
+  app/places.py            sugestão de endereço (Photon, reserva Nominatim); cache e dedup
   app/risk.py              summarize(lat, lon, radius_m=800): resumo por camada via H3 r8
   app/routers/admin.py     login de admin, GET /api/admin/stats, POST /api/events
   app/routers/trips.py     trajeto acompanhado ao vivo: POST /api/trips, POST /api/trips/{id}/position,
@@ -151,6 +152,19 @@ painel de camadas responde, banner "N fonte(s) indisponível(is)" aparece no
 rodapé do mapa quando uma fonte falha, modo Reportar funciona (botão -> clique
 no mapa -> modal -> toast), Esc cancela o modo.
 
+## Busca de endereço
+
+Roda no servidor, não no browser: o Places do Google responde `REQUEST_DENIED`
+(as APIs legadas não são liberadas para projetos criados depois de março/2025) e
+o Nominatim bloqueia por CORS quando chamado de `mapasp.com`. O motor é o
+**Photon**, que responde a consulta parcial; o Nominatim é reserva, porque é
+geocodificador e quer endereço quase completo.
+
+No frontend, `useSuggestions` (em `src/places.ts`) espera 180 ms de pausa e
+descarta resposta atrasada por número de sequência. Sem esse descarte, a
+resposta de "rua a" chega depois da de "rua augusta" e sobrescreve a lista — era
+o motivo de a sugestão nunca corresponder ao que se acabou de digitar.
+
 ## Regras que não podem ser quebradas
 
 1. **Chave do Google Maps** só via `VITE_GOOGLE_MAPS_API_KEY` em
@@ -223,6 +237,7 @@ POST /api/webhooks/whatsapp    Cloud API: texto -> pipeline; location -> riscos 
 GET  /api/risk/here?lat&lon    resumo de risco num raio de ~800 m (H3 r8), usado por
                                /api/webhooks/whatsapp e pelo painel "Risco aqui e agora"
 POST /api/admin/login          {password} -> {token}; exige ADMIN_PASSWORD no ambiente (403 sem ela)
+GET  /api/places/suggest?q=     autocompletar de endereço; 60/min por IP; sempre 200, lista vazia se as fontes caírem
 GET  /api/admin/stats?range=   24h|7d|30d; Bearer token de admin; KPIs, série, rankings, erros
 POST /api/events               {name, meta} -> 204; evento do frontend (page_view, route_calculated...)
 POST /api/auth/register        {email, password} -> {token}; PBKDF2-SHA256

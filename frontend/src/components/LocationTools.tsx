@@ -1,5 +1,6 @@
 import { Marker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { Place, useSuggestions } from "../places";
 
 const SP_BOUNDS = { north: -23.3, south: -24.05, east: -46.3, west: -47.0 };
 
@@ -12,6 +13,12 @@ export function LocationTools({ reportMode }: { reportMode: boolean }) {
   const [picked, setPicked] = useState<Picked | null>(null);
   const [following, setFollowing] = useState(false);
   const [status, setStatus] = useState("");
+  const {
+    suggestions,
+    searching,
+    query: querySuggestions,
+    clear: clearSuggestions,
+  } = useSuggestions();
   const watchRef = useRef<number | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const statusTimer = useRef<number>(0);
@@ -20,6 +27,12 @@ export function LocationTools({ reportMode }: { reportMode: boolean }) {
     setStatus(message);
     window.clearTimeout(statusTimer.current);
     statusTimer.current = window.setTimeout(() => setStatus(""), 4000);
+  }
+
+  function chooseSuggestion(place: Place) {
+    setQuery(place.label.split(",")[0]);
+    clearSuggestions();
+    pick(place.lat, place.lng, place.label, "search");
   }
 
   function pick(lat: number, lng: number, label: string, kind: Picked["kind"]) {
@@ -82,6 +95,11 @@ export function LocationTools({ reportMode }: { reportMode: boolean }) {
     event.preventDefault();
     const q = query.trim();
     if (!q) return;
+    // Enter com a lista aberta escolhe a primeira, como no Maps.
+    if (suggestions.length > 0) {
+      chooseSuggestion(suggestions[0]);
+      return;
+    }
     setStatus("Buscando endereço…");
     const full = q.toLowerCase().includes("paulo") ? q : `${q}, São Paulo, SP`;
     try {
@@ -129,14 +147,32 @@ export function LocationTools({ reportMode }: { reportMode: boolean }) {
           <input
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              querySuggestions(event.target.value);
+            }}
             placeholder="Rua, avenida ou referência…"
             aria-label="Buscar rua ou endereço em São Paulo"
+            autoComplete="off"
           />
           <button type="submit" className="button secondary" aria-label="Buscar">
             ⌕
           </button>
         </form>
+        {suggestions.length > 0 && (
+          <ul className="locate-suggestions" role="listbox">
+            {suggestions.map((place) => (
+              <li key={`${place.label}-${place.lat}-${place.lng}`}>
+                <button type="button" onClick={() => chooseSuggestion(place)}>
+                  {place.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {searching && suggestions.length === 0 && (
+          <span className="locate-status">Buscando endereços…</span>
+        )}
         <div className="locate-actions">
           <button
             className={`button secondary locate-btn${following ? " active" : ""}`}
