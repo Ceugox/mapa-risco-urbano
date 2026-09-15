@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import analytics
+from .caching import CacheHeadersMiddleware
 from .canonical import CanonicalHostMiddleware
 from .collectors.base import run_collector
 from .collectors.cemaden import collect as collect_cemaden
@@ -93,6 +94,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="MapaSP", lifespan=lifespan)
 app.add_middleware(analytics.AccessLogMiddleware)
+app.add_middleware(CacheHeadersMiddleware)
 app.add_middleware(CanonicalHostMiddleware)
 app.add_middleware(
     CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],

@@ -15,7 +15,11 @@ self.addEventListener("install", (event) => {
     (async () => {
       const cache = await caches.open(SHELL_CACHE);
       try {
-        await cache.add(SHELL_URL);
+        // `reload` ignora o cache HTTP do browser. Sem isso o SW novo pode se
+        // semear com o HTML do deploy anterior, que aponta para assets com
+        // hash que já foram apagados — 404 no CSS e no JS, e o app não sobe.
+        const fresco = await fetch(SHELL_URL, { cache: "reload" });
+        if (fresco.ok) await cache.put(SHELL_URL, fresco);
       } catch {
         // Sem rede na instalação: o fallback fica pendente até o próximo sucesso.
       }
