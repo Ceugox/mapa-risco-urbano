@@ -29,10 +29,17 @@ export const layerColors: Record<LayerName, string> = {
   reports: "#a855f7",
 };
 
+// A idade da fonte é a informação que este painel carrega: dá para confiar
+// neste dado agora? Formatar sempre em minutos obriga o leitor a dividir de
+// cabeça — "há 180 min", "há 1440 min" — justamente quando a resposta importa.
+// CEMADEN e INMET ficam horas sem atualizar, então a unidade escala.
 function age(value: string | null) {
   if (!value) return "aguardando";
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
-  return `há ${minutes} min`;
+  if (minutes < 60) return `há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `há ${hours} h`;
+  return `há ${Math.floor(hours / 24)} d`;
 }
 
 const crimeColors = ["#fef3c7", "#fdba74", "#f97316", "#dc2626", "#7f1d1d"];
